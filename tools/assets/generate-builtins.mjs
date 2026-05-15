@@ -215,7 +215,7 @@ function makePlane(size = 1) {
     positions: [-h, 0, -h, h, 0, -h, h, 0, h, -h, 0, h],
     normals: [0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0],
     uvs: [0, 0, 1, 0, 1, 1, 0, 1],
-    indices: [0, 1, 2, 0, 2, 3],
+    indices: [0, 2, 1, 0, 3, 2],
   };
 }
 

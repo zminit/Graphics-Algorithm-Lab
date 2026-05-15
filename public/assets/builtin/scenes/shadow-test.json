@@ -55,7 +55,7 @@
       "name": "Sphere Receiver",
       "model": "/assets/builtin/models/sphere.glb",
       "material": "mat-cool",
-      "position": [1.1, 0.5, 0.8],
+      "position": [1.1, 0.275, 0.8],
       "scale": [0.55, 0.55, 0.55]
     }
   ],
