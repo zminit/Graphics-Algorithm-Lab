@@ -1,6 +1,6 @@
 # Games Platform
 
-图形学算法实验平台。当前完成阶段 0 到阶段 5：Vite + TypeScript + WebGPU 最小可运行骨架、Lab 系统 MVP、标准资产库和场景预设、基础相机/模型/mesh 渲染、参数面板系统，以及 Debug View 系统第一版。
+图形学算法实验平台。当前完成阶段 0 到阶段 6：Vite + TypeScript + WebGPU 最小可运行骨架、Lab 系统 MVP、标准资产库和场景预设、基础相机/模型/mesh 渲染、参数面板系统、Debug View 系统第一版，以及 Shadow Mapping Lab。
 
 ## 开发命令
 
@@ -58,9 +58,10 @@ src/core/lab/
 src/labs/clear-color/
 src/labs/triangle/
 src/labs/basic-mesh/
+src/labs/shadow-mapping/
 ```
 
-应用启动后会显示实验选择器，可以在 `Clear Color`、`Triangle` 和 `Basic Mesh` 之间切换，用于验证 Lab 的 `setup`、`render`、`dispose` 和运行时切换流程。
+应用启动后会显示实验选择器，可以在 `Clear Color`、`Triangle`、`Basic Mesh` 和 `Shadow Mapping` 之间切换，用于验证 Lab 的 `setup`、`render`、`dispose` 和运行时切换流程。
 
 `Basic Mesh` 会加载内置 `shadow-test` 场景，显示 plane、cube、sphere，并支持 Orbit Camera：
 
@@ -107,7 +108,27 @@ Lab 可以通过 `ctx.debug.addTexture(...)` 注册 GPU color texture。当前�
 
 - `rgba8unorm`
 - `bgra8unorm`
+- `depth32float`
 - 手动 Refresh 读取 GPU texture
-- 在右侧面板预览 color texture
+- 在右侧面板预览 color/depth texture
 
 `Basic Mesh` 当前会先渲染到 offscreen color texture，再复制到屏幕，并把这张 `Main Color` texture 注册到 Debug View。
+
+## Shadow Mapping
+
+Shadow Mapping Lab 位于：
+
+```text
+src/labs/shadow-mapping/ShadowMappingLab.ts
+```
+
+当前支持：
+
+- light depth pass
+- hard shadow resolve
+- shadow map resolution 切换
+- depth bias 调节
+- light frustum size 调节
+- light distance 调节
+- shadow on/off
+- `Main Color` 和 `Shadow Map` Debug View

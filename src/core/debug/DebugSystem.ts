@@ -1,4 +1,4 @@
-export type DebugTextureFormat = "rgba8unorm" | "bgra8unorm";
+export type DebugTextureFormat = "rgba8unorm" | "bgra8unorm" | "depth32float";
 
 export type DebugTextureEntry = {
   id: string;
@@ -141,24 +141,12 @@ export class DebugSystem {
 
     await buffer.mapAsync(GPUMapMode.READ);
     const mapped = new Uint8Array(buffer.getMappedRange());
-    const pixels = new Uint8ClampedArray(entry.width * entry.height * bytesPerPixel);
+    const pixels = new Uint8ClampedArray(entry.width * entry.height * 4);
 
-    for (let y = 0; y < entry.height; y += 1) {
-      for (let x = 0; x < entry.width; x += 1) {
-        const source = y * bytesPerRow + x * bytesPerPixel;
-        const target = (y * entry.width + x) * bytesPerPixel;
-        if (entry.format === "bgra8unorm") {
-          pixels[target] = mapped[source + 2];
-          pixels[target + 1] = mapped[source + 1];
-          pixels[target + 2] = mapped[source];
-          pixels[target + 3] = mapped[source + 3];
-        } else {
-          pixels[target] = mapped[source];
-          pixels[target + 1] = mapped[source + 1];
-          pixels[target + 2] = mapped[source + 2];
-          pixels[target + 3] = mapped[source + 3];
-        }
-      }
+    if (entry.format === "depth32float") {
+      writeDepthPixels(mapped, pixels, entry.width, entry.height, bytesPerRow);
+    } else {
+      writeColorPixels(mapped, pixels, entry.width, entry.height, bytesPerRow, entry.format);
     }
 
     buffer.unmap();
@@ -170,4 +158,47 @@ export class DebugSystem {
 
 function alignTo(value: number, alignment: number) {
   return Math.ceil(value / alignment) * alignment;
+}
+
+function writeColorPixels(
+  mapped: Uint8Array,
+  pixels: Uint8ClampedArray,
+  width: number,
+  height: number,
+  bytesPerRow: number,
+  format: DebugTextureFormat,
+) {
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const source = y * bytesPerRow + x * 4;
+      const target = (y * width + x) * 4;
+      if (format === "bgra8unorm") {
+        pixels[target] = mapped[source + 2];
+        pixels[target + 1] = mapped[source + 1];
+        pixels[target + 2] = mapped[source];
+        pixels[target + 3] = mapped[source + 3];
+      } else {
+        pixels[target] = mapped[source];
+        pixels[target + 1] = mapped[source + 1];
+        pixels[target + 2] = mapped[source + 2];
+        pixels[target + 3] = mapped[source + 3];
+      }
+    }
+  }
+}
+
+function writeDepthPixels(mapped: Uint8Array, pixels: Uint8ClampedArray, width: number, height: number, bytesPerRow: number) {
+  const dataView = new DataView(mapped.buffer, mapped.byteOffset, mapped.byteLength);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const source = y * bytesPerRow + x * 4;
+      const target = (y * width + x) * 4;
+      const depth = dataView.getFloat32(source, true);
+      const value = Math.round(Math.max(0, Math.min(1, depth)) * 255);
+      pixels[target] = value;
+      pixels[target + 1] = value;
+      pixels[target + 2] = value;
+      pixels[target + 3] = 255;
+    }
+  }
 }

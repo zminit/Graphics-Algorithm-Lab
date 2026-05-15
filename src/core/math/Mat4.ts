@@ -28,6 +28,17 @@ export function perspective4(fovYRadians: number, aspect: number, near: number, 
   return out;
 }
 
+export function orthographic4(left: number, right: number, bottom: number, top: number, near: number, far: number): Mat4 {
+  const out = identity4();
+  out[0] = 2 / (right - left);
+  out[5] = 2 / (top - bottom);
+  out[10] = 1 / (near - far);
+  out[12] = (left + right) / (left - right);
+  out[13] = (bottom + top) / (bottom - top);
+  out[14] = near / (near - far);
+  return out;
+}
+
 export function lookAt4(eye: Vec3, target: Vec3, up: Vec3): Mat4 {
   const z = normalize3(sub3(eye, target));
   const x = normalize3(cross3(up, z));
