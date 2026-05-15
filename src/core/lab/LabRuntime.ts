@@ -1,6 +1,7 @@
 import { AssetSystem } from "../assets/AssetSystem";
 import { Camera } from "../camera/Camera";
 import { OrbitControls } from "../camera/OrbitControls";
+import { DebugSystem } from "../debug/DebugSystem";
 import { GuiSystem } from "../gui/GuiSystem";
 import type { WebGPUState } from "../gpu/WebGPUState";
 import type { Lab, LabContext, TimeState } from "./Lab";
@@ -8,6 +9,7 @@ import type { Lab, LabContext, TimeState } from "./Lab";
 export type LabRuntimeOptions = WebGPUState & {
   canvas: HTMLCanvasElement;
   guiRoot: HTMLElement;
+  debugRoot: HTMLElement;
   onStatus?: (message: string, tone?: "ready" | "error" | "loading") => void;
 };
 
@@ -19,6 +21,7 @@ export class LabRuntime {
   private readonly controls: OrbitControls;
   private readonly assets = new AssetSystem();
   private readonly gui: GuiSystem;
+  private readonly debug: DebugSystem;
   private readonly time: TimeState = {
     now: 0,
     deltaTime: 0,
@@ -29,6 +32,7 @@ export class LabRuntime {
   constructor(private readonly options: LabRuntimeOptions) {
     this.controls = new OrbitControls(options.canvas, this.camera);
     this.gui = new GuiSystem(options.guiRoot);
+    this.debug = new DebugSystem(options.debugRoot, options.device);
     this.resizeCanvas();
   }
 
@@ -38,6 +42,7 @@ export class LabRuntime {
     this.options.onStatus?.(`Loading ${lab.name}`, "loading");
     this.activeLab?.dispose?.(ctx);
     this.gui.clear();
+    this.debug.clear();
     this.gui.setPresetKey(`games-platform.gui.${lab.id}`);
     this.activeLab = lab;
     this.time.now = 0;
@@ -128,6 +133,7 @@ export class LabRuntime {
       camera: this.camera,
       assets: this.assets,
       gui: this.gui,
+      debug: this.debug,
     };
   }
 }

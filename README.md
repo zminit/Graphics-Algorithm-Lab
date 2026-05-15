@@ -1,6 +1,6 @@
 # Games Platform
 
-图形学算法实验平台。当前完成阶段 0、阶段 1、阶段 2、阶段 3 和阶段 4：Vite + TypeScript + WebGPU 最小可运行骨架、Lab 系统 MVP、标准资产库和场景预设、基础相机/模型/mesh 渲染，以及参数面板系统。
+图形学算法实验平台。当前完成阶段 0 到阶段 5：Vite + TypeScript + WebGPU 最小可运行骨架、Lab 系统 MVP、标准资产库和场景预设、基础相机/模型/mesh 渲染、参数面板系统，以及 Debug View 系统第一版。
 
 ## 开发命令
 
@@ -94,3 +94,20 @@ vec3
 - Load：读取当前 Lab 保存过的参数
 
 `Basic Mesh` 当前注册了背景色、环境光、光照强度、着色模式、自动旋转和旋转速度参数。
+
+## Debug View
+
+Debug View 核心位于：
+
+```text
+src/core/debug/DebugSystem.ts
+```
+
+Lab 可以通过 `ctx.debug.addTexture(...)` 注册 GPU color texture。当前第一版支持：
+
+- `rgba8unorm`
+- `bgra8unorm`
+- 手动 Refresh 读取 GPU texture
+- 在右侧面板预览 color texture
+
+`Basic Mesh` 当前会先渲染到 offscreen color texture，再复制到屏幕，并把这张 `Main Color` texture 注册到 Debug View。

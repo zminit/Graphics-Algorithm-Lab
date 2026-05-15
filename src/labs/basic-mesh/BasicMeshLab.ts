@@ -75,6 +75,7 @@ export class BasicMeshLab implements Lab {
   private pipeline?: GPURenderPipeline;
   private frameBuffer?: GPUBuffer;
   private frameBindGroup?: GPUBindGroup;
+  private colorTexture?: GPUTexture;
   private depthTexture?: GPUTexture;
   private renderItems: RenderItem[] = [];
   private readonly params = {
@@ -148,12 +149,31 @@ export class BasicMeshLab implements Lab {
   }
 
   resize(ctx: LabContext) {
+    this.colorTexture?.destroy();
     this.depthTexture?.destroy();
+    this.colorTexture = ctx.device.createTexture({
+      label: "Basic Mesh Color Texture",
+      size: [ctx.canvas.width, ctx.canvas.height],
+      format: ctx.format,
+      usage:
+        GPUTextureUsage.RENDER_ATTACHMENT |
+        GPUTextureUsage.COPY_SRC |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.TEXTURE_BINDING,
+    });
     this.depthTexture = ctx.device.createTexture({
       label: "Basic Mesh Depth Texture",
       size: [ctx.canvas.width, ctx.canvas.height],
       format: "depth24plus",
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    ctx.debug.addTexture({
+      id: "basic-mesh-color",
+      label: "Main Color",
+      texture: this.colorTexture,
+      width: ctx.canvas.width,
+      height: ctx.canvas.height,
+      format: ctx.format === "bgra8unorm" ? "bgra8unorm" : "rgba8unorm",
     });
   }
 
@@ -192,7 +212,7 @@ export class BasicMeshLab implements Lab {
   }
 
   render(ctx: LabContext) {
-    if (!this.pipeline || !this.frameBindGroup || !this.depthTexture || !this.scene) {
+    if (!this.pipeline || !this.frameBindGroup || !this.colorTexture || !this.depthTexture || !this.scene) {
       return;
     }
 
@@ -201,7 +221,7 @@ export class BasicMeshLab implements Lab {
     const pass = commandEncoder.beginRenderPass({
       colorAttachments: [
         {
-          view: ctx.context.getCurrentTexture().createView(),
+          view: this.colorTexture.createView(),
           clearValue: { r: bg[0], g: bg[1], b: bg[2], a: 1 },
           loadOp: "clear",
           storeOp: "store",
@@ -226,11 +246,18 @@ export class BasicMeshLab implements Lab {
     }
 
     pass.end();
+    commandEncoder.copyTextureToTexture(
+      { texture: this.colorTexture },
+      { texture: ctx.context.getCurrentTexture() },
+      { width: ctx.canvas.width, height: ctx.canvas.height },
+    );
     ctx.device.queue.submit([commandEncoder.finish()]);
   }
 
   dispose() {
+    this.colorTexture?.destroy();
     this.depthTexture?.destroy();
+    this.colorTexture = undefined;
     this.depthTexture = undefined;
 
     for (const item of this.renderItems) {

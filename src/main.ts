@@ -22,6 +22,7 @@ const labSelect = queryRequiredElement<HTMLSelectElement>("#lab-select");
 const labTitle = queryRequiredElement<HTMLElement>("#lab-title");
 const labDescription = queryRequiredElement<HTMLElement>("#lab-description");
 const guiRoot = queryRequiredElement<HTMLElement>("#gui-root");
+const debugRoot = queryRequiredElement<HTMLElement>("#debug-root");
 const workspace = queryRequiredElement<HTMLElement>(".workspace");
 const panelResizer = queryRequiredElement<HTMLElement>("#panel-resizer");
 
@@ -142,6 +143,7 @@ async function start() {
       ...state,
       canvas,
       guiRoot,
+      debugRoot,
       onStatus: setStatus,
     });
     const adapterInfo = state.adapter.info;
