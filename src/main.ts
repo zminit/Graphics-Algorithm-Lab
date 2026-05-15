@@ -42,6 +42,10 @@ async function initWebGPU(target: HTMLCanvasElement): Promise<WebGPUState> {
   }
 
   const device = await adapter.requestDevice();
+  device.addEventListener("uncapturederror", (event) => {
+    setStatus(event.error.message, "error");
+    console.error(event.error);
+  });
   const context = target.getContext("webgpu");
   if (!context) {
     throw new Error("Could not create a WebGPU canvas context.");

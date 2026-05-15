@@ -138,7 +138,7 @@ export class ShadowMappingLab implements Lab {
 
     this.frameBuffer = ctx.device.createBuffer({
       label: "Shadow Mapping Frame Uniforms",
-      size: 160,
+      size: 176,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -247,12 +247,12 @@ export class ShadowMappingLab implements Lab {
     const lightIntensity = (directional?.intensity ?? 1) * this.params.lightIntensity;
     this.lightViewProjection = this.computeLightViewProjection(lightDirection);
 
-    const frameUniforms = new Float32Array(40);
+    const frameUniforms = new Float32Array(44);
     frameUniforms.set(ctx.camera.viewProjectionMatrix, 0);
     frameUniforms.set(this.lightViewProjection, 16);
     frameUniforms.set([lightDirection[0], lightDirection[1], lightDirection[2], 0], 32);
     frameUniforms.set([lightColor[0] * lightIntensity, lightColor[1] * lightIntensity, lightColor[2] * lightIntensity, 1], 36);
-    frameUniforms.set([this.params.ambient, 0, this.params.bias, this.params.shadowEnabled ? 1 : 0], 40 - 4);
+    frameUniforms.set([this.params.ambient, 0, this.params.bias, this.params.shadowEnabled ? 1 : 0], 40);
     ctx.device.queue.writeBuffer(this.frameBuffer, 0, frameUniforms);
 
     for (const item of this.renderItems) {
