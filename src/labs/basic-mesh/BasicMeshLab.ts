@@ -10,6 +10,7 @@ struct FrameUniforms {
   viewProjection: mat4x4f,
   lightDirection: vec4f,
   lightColor: vec4f,
+  params: vec4f,
 };
 
 struct ObjectUniforms {
@@ -47,8 +48,10 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   let n = normalize(input.normal);
   let l = normalize(-frame.lightDirection.xyz);
   let ndotl = max(dot(n, l), 0.0);
-  let ambient = 0.18;
-  let lit = input.color.rgb * (ambient + ndotl * frame.lightColor.rgb);
+  let ambient = frame.params.x;
+  let normalColor = n * 0.5 + vec3f(0.5);
+  let base = mix(input.color.rgb, normalColor, frame.params.y);
+  let lit = base * (ambient + ndotl * frame.lightColor.rgb);
   return vec4f(lit, input.color.a);
 }
 `;
@@ -74,11 +77,21 @@ export class BasicMeshLab implements Lab {
   private frameBindGroup?: GPUBindGroup;
   private depthTexture?: GPUTexture;
   private renderItems: RenderItem[] = [];
+  private readonly params = {
+    background: [0.03, 0.04, 0.05] as [number, number, number],
+    ambient: 0.18,
+    lightIntensity: 1,
+    shadingMode: "lit",
+    autoRotate: false,
+    rotationSpeed: 0.35,
+  };
 
   async setup(ctx: LabContext) {
     this.scene = await ctx.assets.loadScene(BuiltinAssets.scenes.shadowTest);
     ctx.camera.lookAt(this.scene.camera.position, this.scene.camera.target);
     ctx.camera.setPerspective(this.scene.camera.fovYDegrees, this.scene.camera.near, this.scene.camera.far);
+    this.params.background = [...(this.scene.environment?.color ?? this.params.background)];
+    this.registerParams(ctx);
 
     const shader = ctx.device.createShaderModule({
       label: "Basic Mesh Shader",
@@ -87,7 +100,7 @@ export class BasicMeshLab implements Lab {
 
     this.frameBuffer = ctx.device.createBuffer({
       label: "Basic Mesh Frame Uniforms",
-      size: 96,
+      size: 112,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -152,8 +165,8 @@ export class BasicMeshLab implements Lab {
     const directional = this.scene.lights.find((light) => light.type === "directional");
     const lightDirection = normalize3(directional?.direction ?? [-0.5, -1, -0.4]);
     const lightColor = directional?.color ?? [1, 1, 1];
-    const lightIntensity = directional?.intensity ?? 1;
-    const frameUniforms = new Float32Array(24);
+    const lightIntensity = (directional?.intensity ?? 1) * this.params.lightIntensity;
+    const frameUniforms = new Float32Array(28);
 
     frameUniforms.set(ctx.camera.viewProjectionMatrix, 0);
     frameUniforms.set([lightDirection[0], lightDirection[1], lightDirection[2], 0], 16);
@@ -161,12 +174,17 @@ export class BasicMeshLab implements Lab {
       [lightColor[0] * lightIntensity, lightColor[1] * lightIntensity, lightColor[2] * lightIntensity, 1],
       20,
     );
+    frameUniforms.set([this.params.ambient, this.params.shadingMode === "normal" ? 1 : 0, 0, 0], 24);
     ctx.device.queue.writeBuffer(this.frameBuffer, 0, frameUniforms);
 
     for (const item of this.renderItems) {
-      const modelViewProjection = multiply4(ctx.camera.viewProjectionMatrix, item.modelMatrix);
+      const modelMatrix =
+        this.params.autoRotate && item.sceneMesh.id !== "floor"
+          ? multiply4(item.modelMatrix, composeTransform([0, 0, 0], [0, ctx.time.elapsed * this.params.rotationSpeed * 90, 0], [1, 1, 1]))
+          : item.modelMatrix;
+      const modelViewProjection = multiply4(ctx.camera.viewProjectionMatrix, modelMatrix);
       const objectUniforms = new Float32Array(36);
-      objectUniforms.set(item.modelMatrix, 0);
+      objectUniforms.set(modelMatrix, 0);
       objectUniforms.set(modelViewProjection, 16);
       objectUniforms.set(item.material.baseColor, 32);
       ctx.device.queue.writeBuffer(item.objectBuffer, 0, objectUniforms);
@@ -178,7 +196,7 @@ export class BasicMeshLab implements Lab {
       return;
     }
 
-    const bg = this.scene.environment?.color ?? [0.03, 0.04, 0.05];
+    const bg = this.params.background;
     const commandEncoder = ctx.device.createCommandEncoder();
     const pass = commandEncoder.beginRenderPass({
       colorAttachments: [
@@ -267,5 +285,69 @@ export class BasicMeshLab implements Lab {
         bindGroup,
       });
     }
+  }
+
+  private registerParams(ctx: LabContext) {
+    ctx.gui.add("background", {
+      type: "color",
+      label: "Background",
+      get: () => this.params.background,
+      set: (value) => {
+        this.params.background = value;
+      },
+    });
+    ctx.gui.add("ambient", {
+      type: "float",
+      label: "Ambient",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      get: () => this.params.ambient,
+      set: (value) => {
+        this.params.ambient = value;
+      },
+    });
+    ctx.gui.add("lightIntensity", {
+      type: "float",
+      label: "Light",
+      min: 0,
+      max: 2,
+      step: 0.01,
+      get: () => this.params.lightIntensity,
+      set: (value) => {
+        this.params.lightIntensity = value;
+      },
+    });
+    ctx.gui.add("shadingMode", {
+      type: "enum",
+      label: "Shading",
+      options: [
+        { label: "Lit", value: "lit" },
+        { label: "Normal", value: "normal" },
+      ],
+      get: () => this.params.shadingMode,
+      set: (value) => {
+        this.params.shadingMode = value;
+      },
+    });
+    ctx.gui.add("autoRotate", {
+      type: "bool",
+      label: "Auto Rotate",
+      get: () => this.params.autoRotate,
+      set: (value) => {
+        this.params.autoRotate = value;
+      },
+    });
+    ctx.gui.add("rotationSpeed", {
+      type: "float",
+      label: "Spin Speed",
+      min: 0,
+      max: 2,
+      step: 0.01,
+      get: () => this.params.rotationSpeed,
+      set: (value) => {
+        this.params.rotationSpeed = value;
+      },
+    });
   }
 }

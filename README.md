@@ -1,6 +1,6 @@
 # Games Platform
 
-图形学算法实验平台。当前完成阶段 0、阶段 1、阶段 2 和阶段 3：Vite + TypeScript + WebGPU 最小可运行骨架、Lab 系统 MVP、标准资产库和场景预设，以及基础相机/模型/mesh 渲染。
+图形学算法实验平台。当前完成阶段 0、阶段 1、阶段 2、阶段 3 和阶段 4：Vite + TypeScript + WebGPU 最小可运行骨架、Lab 系统 MVP、标准资产库和场景预设、基础相机/模型/mesh 渲染，以及参数面板系统。
 
 ## 开发命令
 
@@ -67,3 +67,30 @@ src/labs/basic-mesh/
 - 左键拖拽：旋转
 - Shift + 拖拽或中键拖拽：平移
 - 滚轮：缩放
+
+## 参数面板
+
+GUI 核心位于：
+
+```text
+src/core/gui/GuiSystem.ts
+```
+
+Lab 可以通过 `ctx.gui.add(id, param)` 注册参数。当前支持：
+
+```text
+float
+int
+bool
+enum
+color
+vec3
+```
+
+参数面板支持：
+
+- Reset：恢复当前 Lab 初始参数
+- Save：保存当前 Lab 参数到 `localStorage`
+- Load：读取当前 Lab 保存过的参数
+
+`Basic Mesh` 当前注册了背景色、环境光、光照强度、着色模式、自动旋转和旋转速度参数。

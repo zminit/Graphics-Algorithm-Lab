@@ -21,6 +21,7 @@ const statusElement = queryRequiredElement<HTMLElement>("#gpu-status");
 const labSelect = queryRequiredElement<HTMLSelectElement>("#lab-select");
 const labTitle = queryRequiredElement<HTMLElement>("#lab-title");
 const labDescription = queryRequiredElement<HTMLElement>("#lab-description");
+const guiRoot = queryRequiredElement<HTMLElement>("#gui-root");
 
 function setStatus(message: string, tone: "ready" | "error" | "loading" = "loading") {
   statusElement.textContent = message;
@@ -66,6 +67,7 @@ async function start() {
     const runtime = new LabRuntime({
       ...state,
       canvas,
+      guiRoot,
       onStatus: setStatus,
     });
     const adapterInfo = state.adapter.info;

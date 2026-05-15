@@ -147,6 +147,12 @@ h1 {
   text-transform: uppercase;
 }
 
+.panel-divider {
+  height: 1px;
+  margin: 18px 0;
+  background: #26323e;
+}
+
 .side-panel h2 {
   margin: 0 0 10px;
   color: #f6f8fb;
@@ -159,6 +165,118 @@ h1 {
   color: #b8c5d0;
   font-size: 14px;
   line-height: 1.5;
+}
+
+.gui-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gui-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.gui-actions button {
+  height: 28px;
+  padding: 0 10px;
+  color: #dfe8ef;
+  font-size: 12px;
+  border: 1px solid #364555;
+  border-radius: 6px;
+  background: #19222c;
+  cursor: pointer;
+}
+
+.gui-actions button:hover {
+  border-color: #4d6a82;
+  background: #202c38;
+}
+
+.gui-empty {
+  margin: 8px 0 0;
+  color: #8796a4;
+  font-size: 13px;
+}
+
+.gui-row {
+  display: grid;
+  grid-template-columns: minmax(78px, 0.8fr) minmax(0, 1.2fr);
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  color: #c9d4dd;
+  font-size: 13px;
+  border-bottom: 1px solid #1c2630;
+}
+
+.gui-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.gui-control input[type="range"] {
+  width: min(120px, 100%);
+}
+
+.gui-control input[type="number"] {
+  width: 54px;
+  height: 28px;
+  padding: 0 6px;
+  color: #eef3f8;
+  border: 1px solid #364555;
+  border-radius: 6px;
+  background: #19222c;
+}
+
+.gui-control input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+.gui-control input[type="color"] {
+  width: 42px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #364555;
+  border-radius: 6px;
+  background: #19222c;
+}
+
+.gui-control select {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  color: #eef3f8;
+  border: 1px solid #364555;
+  border-radius: 6px;
+  background: #19222c;
+}
+
+.gui-value {
+  width: 38px;
+  color: #9fb0be;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.gui-row-vec3 {
+  grid-template-columns: 1fr;
+  align-items: stretch;
+}
+
+.gui-row-vec3 .gui-control {
+  justify-content: stretch;
+}
+
+.gui-row-vec3 .gui-control input {
+  flex: 1;
+  min-width: 0;
 }
 
 @media (max-width: 640px) {

@@ -1,5 +1,6 @@
 import type { AssetSystem } from "../assets/AssetSystem";
 import type { Camera } from "../camera/Camera";
+import type { GuiSystem } from "../gui/GuiSystem";
 import type { WebGPUState } from "../gpu/WebGPUState";
 
 export type LabCategory = "template" | "rendering" | "debug";
@@ -16,6 +17,7 @@ export type LabContext = WebGPUState & {
   time: TimeState;
   camera: Camera;
   assets: AssetSystem;
+  gui: GuiSystem;
 };
 
 export type Lab = {
