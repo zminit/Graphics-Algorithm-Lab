@@ -1,6 +1,6 @@
 # Games Platform
 
-图形学算法实验平台。当前完成阶段 0、阶段 1 和阶段 2：Vite + TypeScript + WebGPU 最小可运行骨架、Lab 系统 MVP，以及标准资产库和场景预设的第一版。
+图形学算法实验平台。当前完成阶段 0、阶段 1、阶段 2 和阶段 3：Vite + TypeScript + WebGPU 最小可运行骨架、Lab 系统 MVP、标准资产库和场景预设，以及基础相机/模型/mesh 渲染。
 
 ## 开发命令
 
@@ -57,6 +57,13 @@ src/core/lab/
 ```text
 src/labs/clear-color/
 src/labs/triangle/
+src/labs/basic-mesh/
 ```
 
-应用启动后会显示实验选择器，可以在 `Clear Color` 和 `Triangle` 之间切换，用于验证 Lab 的 `setup`、`render`、`dispose` 和运行时切换流程。
+应用启动后会显示实验选择器，可以在 `Clear Color`、`Triangle` 和 `Basic Mesh` 之间切换，用于验证 Lab 的 `setup`、`render`、`dispose` 和运行时切换流程。
+
+`Basic Mesh` 会加载内置 `shadow-test` 场景，显示 plane、cube、sphere，并支持 Orbit Camera：
+
+- 左键拖拽：旋转
+- Shift + 拖拽或中键拖拽：平移
+- 滚轮：缩放

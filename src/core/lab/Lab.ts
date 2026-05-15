@@ -1,3 +1,5 @@
+import type { AssetSystem } from "../assets/AssetSystem";
+import type { Camera } from "../camera/Camera";
 import type { WebGPUState } from "../gpu/WebGPUState";
 
 export type LabCategory = "template" | "rendering" | "debug";
@@ -12,6 +14,8 @@ export type TimeState = {
 export type LabContext = WebGPUState & {
   canvas: HTMLCanvasElement;
   time: TimeState;
+  camera: Camera;
+  assets: AssetSystem;
 };
 
 export type Lab = {

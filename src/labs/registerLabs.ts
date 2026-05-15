@@ -1,3 +1,4 @@
+import { BasicMeshLab } from "./basic-mesh/BasicMeshLab";
 import { LabRegistry } from "../core/lab/LabRegistry";
 import { ClearColorLab } from "./clear-color/ClearColorLab";
 import { TriangleLab } from "./triangle/TriangleLab";
@@ -7,6 +8,7 @@ export function createLabRegistry() {
 
   registry.register(new ClearColorLab());
   registry.register(new TriangleLab());
+  registry.register(new BasicMeshLab());
 
   return registry;
 }

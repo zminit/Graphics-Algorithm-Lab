@@ -53,22 +53,6 @@ async function initWebGPU(target: HTMLCanvasElement): Promise<WebGPUState> {
   return { adapter, device, context, format };
 }
 
-function resizeCanvasToDisplaySize(target: HTMLCanvasElement) {
-  const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-  const rect = target.getBoundingClientRect();
-  const width = Math.max(1, Math.floor(rect.width * pixelRatio));
-  const height = Math.max(1, Math.floor(rect.height * pixelRatio));
-
-  if (target.width !== width || target.height !== height) {
-    target.width = width;
-    target.height = height;
-  }
-}
-
-function resizeCanvas() {
-  resizeCanvasToDisplaySize(canvas);
-}
-
 function setActiveLabDetails(lab: Lab) {
   labTitle.textContent = lab.name;
   labDescription.textContent = lab.description || "No description.";
@@ -111,11 +95,9 @@ async function start() {
     });
 
     window.addEventListener("resize", () => {
-      resizeCanvas();
       runtime.resize();
     });
 
-    resizeCanvas();
     const defaultLab = registry.getDefault();
     labSelect.value = defaultLab.id;
     labSelect.disabled = false;

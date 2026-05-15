@@ -1,3 +1,6 @@
+import { AssetSystem } from "../assets/AssetSystem";
+import { Camera } from "../camera/Camera";
+import { OrbitControls } from "../camera/OrbitControls";
 import type { WebGPUState } from "../gpu/WebGPUState";
 import type { Lab, LabContext, TimeState } from "./Lab";
 
@@ -10,6 +13,9 @@ export class LabRuntime {
   private activeLab?: Lab;
   private animationFrameId = 0;
   private lastTime = 0;
+  private readonly camera = new Camera();
+  private readonly controls: OrbitControls;
+  private readonly assets = new AssetSystem();
   private readonly time: TimeState = {
     now: 0,
     deltaTime: 0,
@@ -17,7 +23,10 @@ export class LabRuntime {
     frame: 0,
   };
 
-  constructor(private readonly options: LabRuntimeOptions) {}
+  constructor(private readonly options: LabRuntimeOptions) {
+    this.controls = new OrbitControls(options.canvas, this.camera);
+    this.resizeCanvas();
+  }
 
   async setLab(lab: Lab) {
     const ctx = this.createContext();
@@ -61,10 +70,12 @@ export class LabRuntime {
   dispose() {
     this.stop();
     this.activeLab?.dispose?.(this.createContext());
+    this.controls.dispose();
     this.activeLab = undefined;
   }
 
   resize() {
+    this.resizeCanvas();
     this.activeLab?.resize?.(this.createContext());
   }
 
@@ -81,8 +92,23 @@ export class LabRuntime {
     this.lastTime = now;
 
     const ctx = this.createContext();
+    this.controls.update();
     lab.update?.(ctx);
     lab.render(ctx);
+  }
+
+  private resizeCanvas() {
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    const rect = this.options.canvas.getBoundingClientRect();
+    const width = Math.max(1, Math.floor(rect.width * pixelRatio));
+    const height = Math.max(1, Math.floor(rect.height * pixelRatio));
+
+    if (this.options.canvas.width !== width || this.options.canvas.height !== height) {
+      this.options.canvas.width = width;
+      this.options.canvas.height = height;
+    }
+
+    this.camera.setAspect(width / height);
   }
 
   private createContext(): LabContext {
@@ -93,6 +119,8 @@ export class LabRuntime {
       format: this.options.format,
       canvas: this.options.canvas,
       time: this.time,
+      camera: this.camera,
+      assets: this.assets,
     };
   }
 }
