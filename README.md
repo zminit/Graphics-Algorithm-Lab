@@ -1,6 +1,6 @@
 # Games Platform
 
-图形学算法实验平台。当前完成阶段 0 和阶段 2：Vite + TypeScript + WebGPU 最小可运行骨架，以及标准资产库和场景预设的第一版。
+图形学算法实验平台。当前完成阶段 0、阶段 1 和阶段 2：Vite + TypeScript + WebGPU 最小可运行骨架、Lab 系统 MVP，以及标准资产库和场景预设的第一版。
 
 ## 开发命令
 
@@ -43,3 +43,20 @@ public/assets/builtin/hdr/
 ```bash
 npm run assets:generate
 ```
+
+## Lab 系统
+
+Lab 核心位于：
+
+```text
+src/core/lab/
+```
+
+当前内置两个验证实验：
+
+```text
+src/labs/clear-color/
+src/labs/triangle/
+```
+
+应用启动后会显示实验选择器，可以在 `Clear Color` 和 `Triangle` 之间切换，用于验证 Lab 的 `setup`、`render`、`dispose` 和运行时切换流程。

@@ -1,13 +1,10 @@
 import "./styles.css";
 import { BuiltinAssets } from "./core/assets/BuiltinAssets";
 import { loadScenePreset } from "./core/assets/loadScene";
-
-type WebGPUState = {
-  adapter: GPUAdapter;
-  device: GPUDevice;
-  context: GPUCanvasContext;
-  format: GPUTextureFormat;
-};
+import type { WebGPUState } from "./core/gpu/WebGPUState";
+import { LabRuntime } from "./core/lab/LabRuntime";
+import type { Lab } from "./core/lab/Lab";
+import { createLabRegistry } from "./labs/registerLabs";
 
 function queryRequiredElement<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -21,6 +18,9 @@ function queryRequiredElement<T extends Element>(selector: string): T {
 
 const canvas = queryRequiredElement<HTMLCanvasElement>("#gfx-canvas");
 const statusElement = queryRequiredElement<HTMLElement>("#gpu-status");
+const labSelect = queryRequiredElement<HTMLSelectElement>("#lab-select");
+const labTitle = queryRequiredElement<HTMLElement>("#lab-title");
+const labDescription = queryRequiredElement<HTMLElement>("#lab-description");
 
 function setStatus(message: string, tone: "ready" | "error" | "loading" = "loading") {
   statusElement.textContent = message;
@@ -65,43 +65,62 @@ function resizeCanvasToDisplaySize(target: HTMLCanvasElement) {
   }
 }
 
-function renderFrame(state: WebGPUState, timeMs: number) {
+function resizeCanvas() {
   resizeCanvasToDisplaySize(canvas);
+}
 
-  const t = timeMs * 0.001;
-  const commandEncoder = state.device.createCommandEncoder();
-  const view = state.context.getCurrentTexture().createView();
-
-  const renderPass = commandEncoder.beginRenderPass({
-    colorAttachments: [
-      {
-        view,
-        clearValue: {
-          r: 0.04 + Math.sin(t * 0.7) * 0.015,
-          g: 0.055,
-          b: 0.075 + Math.cos(t * 0.5) * 0.015,
-          a: 1,
-        },
-        loadOp: "clear",
-        storeOp: "store",
-      },
-    ],
-  });
-
-  renderPass.end();
-  state.device.queue.submit([commandEncoder.finish()]);
-
-  requestAnimationFrame((nextTime) => renderFrame(state, nextTime));
+function setActiveLabDetails(lab: Lab) {
+  labTitle.textContent = lab.name;
+  labDescription.textContent = lab.description || "No description.";
 }
 
 async function start() {
   try {
     const state = await initWebGPU(canvas);
     const scenePreset = await loadScenePreset(BuiltinAssets.scenes.shadowTest);
+    const registry = createLabRegistry();
+    const runtime = new LabRuntime({
+      ...state,
+      canvas,
+      onStatus: setStatus,
+    });
     const adapterInfo = state.adapter.info;
     const gpuName = adapterInfo?.description || "WebGPU Ready";
-    setStatus(`${gpuName} · ${scenePreset.name} loaded`, "ready");
-    requestAnimationFrame((time) => renderFrame(state, time));
+    const labs = registry.list();
+
+    for (const lab of labs) {
+      const option = document.createElement("option");
+      option.value = lab.id;
+      option.textContent = lab.name;
+      labSelect.append(option);
+    }
+
+    const switchLab = async (labId: string) => {
+      const lab = registry.get(labId);
+      setActiveLabDetails(lab);
+      await runtime.setLab(lab);
+      setStatus(`${gpuName} · ${scenePreset.name} · ${lab.name}`, "ready");
+    };
+
+    labSelect.addEventListener("change", () => {
+      void switchLab(labSelect.value).catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        setStatus(message, "error");
+        console.error(error);
+      });
+    });
+
+    window.addEventListener("resize", () => {
+      resizeCanvas();
+      runtime.resize();
+    });
+
+    resizeCanvas();
+    const defaultLab = registry.getDefault();
+    labSelect.value = defaultLab.id;
+    labSelect.disabled = false;
+    await switchLab(defaultLab.id);
+    runtime.start();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     setStatus(message, "error");

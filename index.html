@@ -13,9 +13,22 @@
             <p class="eyebrow">Graphics Algorithm Lab</p>
             <h1>Games Platform</h1>
           </div>
-          <div class="status-pill" id="gpu-status">Initializing WebGPU</div>
+          <div class="topbar-actions">
+            <label class="lab-picker">
+              <span>Lab</span>
+              <select id="lab-select" disabled></select>
+            </label>
+            <div class="status-pill" id="gpu-status">Initializing WebGPU</div>
+          </div>
         </header>
-        <canvas id="gfx-canvas" aria-label="WebGPU viewport"></canvas>
+        <div class="workspace">
+          <canvas id="gfx-canvas" aria-label="WebGPU viewport"></canvas>
+          <aside class="side-panel">
+            <p class="panel-label">Active Lab</p>
+            <h2 id="lab-title">Loading</h2>
+            <p id="lab-description">Preparing the lab runtime.</p>
+          </aside>
+        </div>
       </section>
     </main>
     <script type="module" src="/src/main.ts"></script>
