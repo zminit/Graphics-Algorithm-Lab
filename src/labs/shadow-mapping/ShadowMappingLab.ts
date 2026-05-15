@@ -69,12 +69,10 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 fn computeShadow(shadowPosition: vec4f) -> f32 {
   let projected = shadowPosition.xyz / shadowPosition.w;
   let uv = projected.xy * vec2f(0.5, -0.5) + vec2f(0.5, 0.5);
-
-  if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0 || projected.z < 0.0 || projected.z > 1.0) {
-    return 1.0;
-  }
-
-  return textureSampleCompare(shadowMap, shadowSampler, uv, projected.z - frame.params.z);
+  let clampedUv = clamp(uv, vec2f(0.0), vec2f(1.0));
+  let sampled = textureSampleCompare(shadowMap, shadowSampler, clampedUv, projected.z - frame.params.z);
+  let inBounds = uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0 && projected.z >= 0.0 && projected.z <= 1.0;
+  return select(1.0, sampled, inBounds);
 }
 
 @fragment

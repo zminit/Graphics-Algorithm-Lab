@@ -347,6 +347,7 @@ h1 {
 }
 
 .log-panel {
+  min-width: 0;
   border-top: 1px solid #26323e;
   background: #10161d;
 }
@@ -390,6 +391,7 @@ h1 {
 .log-body {
   height: min(28vh, 260px);
   min-height: 150px;
+  min-width: 0;
 }
 
 .log-toolbar {
@@ -424,6 +426,7 @@ h1 {
 
 .log-list {
   height: calc(100% - 34px);
+  min-width: 0;
   overflow: auto;
   padding: 8px 12px;
 }
@@ -432,6 +435,7 @@ h1 {
   display: grid;
   grid-template-columns: 132px minmax(0, 1fr);
   gap: 10px;
+  min-width: 0;
   padding: 6px 0;
   border-bottom: 1px solid #1c2630;
 }
@@ -454,8 +458,12 @@ h1 {
 }
 
 .log-entry pre {
+  min-width: 0;
+  max-width: 100%;
   margin: 0;
+  overflow: visible;
   overflow-wrap: anywhere;
+  word-break: break-word;
   white-space: pre-wrap;
   color: #d7e0e8;
   font-family: "Cascadia Code", "Consolas", ui-monospace, monospace;
