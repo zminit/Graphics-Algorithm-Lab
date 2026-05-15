@@ -52,6 +52,7 @@ async function initWebGPU(target: HTMLCanvasElement): Promise<WebGPUState> {
     device,
     format,
     alphaMode: "opaque",
+    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_DST,
   });
 
   return { adapter, device, context, format };
@@ -177,7 +178,7 @@ async function start() {
     });
     setupPanelResize(() => runtime.resize());
 
-    const defaultLab = registry.getDefault();
+    const defaultLab = registry.get("basic-mesh");
     labSelect.value = defaultLab.id;
     labSelect.disabled = false;
     await switchLab(defaultLab.id);

@@ -218,6 +218,7 @@ export class BasicMeshLab implements Lab {
 
     const bg = this.params.background;
     const commandEncoder = ctx.device.createCommandEncoder();
+    const currentTexture = ctx.context.getCurrentTexture();
     const pass = commandEncoder.beginRenderPass({
       colorAttachments: [
         {
@@ -248,7 +249,7 @@ export class BasicMeshLab implements Lab {
     pass.end();
     commandEncoder.copyTextureToTexture(
       { texture: this.colorTexture },
-      { texture: ctx.context.getCurrentTexture() },
+      { texture: currentTexture },
       { width: ctx.canvas.width, height: ctx.canvas.height },
     );
     ctx.device.queue.submit([commandEncoder.finish()]);
