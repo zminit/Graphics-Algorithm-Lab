@@ -1,0 +1,59 @@
+{
+  "schema": "games-platform.scene-preset",
+  "version": 1,
+  "id": "postprocess-test",
+  "name": "Postprocess Test",
+  "purpose": "A high-contrast starter scene for bloom, tone mapping, FXAA, TAA, SSAO, and SSR experiments.",
+  "camera": {
+    "position": [3, 2, 4],
+    "target": [0, 0.6, 0],
+    "fovYDegrees": 50,
+    "near": 0.1,
+    "far": 100
+  },
+  "environment": {
+    "color": [0.015, 0.018, 0.024]
+  },
+  "materials": [
+    {
+      "id": "mat-checker",
+      "name": "Checker Material",
+      "baseColor": [1, 1, 1, 1],
+      "roughness": 0.65,
+      "baseColorTexture": "/assets/builtin/textures/checkerboard.png"
+    },
+    {
+      "id": "mat-bright",
+      "name": "Bright Test Material",
+      "baseColor": [1, 0.78, 0.36, 1],
+      "roughness": 0.25
+    }
+  ],
+  "meshes": [
+    {
+      "id": "floor",
+      "name": "Checker Ground",
+      "model": "/assets/builtin/models/plane.glb",
+      "material": "mat-checker",
+      "scale": [5, 1, 5]
+    },
+    {
+      "id": "center-sphere",
+      "name": "Bright Sphere",
+      "model": "/assets/builtin/models/sphere.glb",
+      "material": "mat-bright",
+      "position": [0, 0.65, 0],
+      "scale": [0.65, 0.65, 0.65]
+    }
+  ],
+  "lights": [
+    {
+      "type": "point",
+      "name": "Bright Point Light",
+      "position": [1.6, 2.2, 1.8],
+      "color": [1, 0.75, 0.45],
+      "intensity": 18,
+      "radius": 4
+    }
+  ]
+}

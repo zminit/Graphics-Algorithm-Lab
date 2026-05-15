@@ -1,0 +1,63 @@
+{
+  "schema": "games-platform.scene-preset",
+  "version": 1,
+  "id": "pbr-test",
+  "name": "PBR Test",
+  "purpose": "A compact material scene for metallic, roughness, normal, and IBL experiments.",
+  "camera": {
+    "position": [0, 1.8, 5],
+    "target": [0, 0.8, 0],
+    "fovYDegrees": 40,
+    "near": 0.1,
+    "far": 100
+  },
+  "environment": {
+    "color": [0.04, 0.05, 0.06],
+    "hdr": "/assets/builtin/hdr/studio-small.placeholder.md"
+  },
+  "materials": [
+    {
+      "id": "mat-dielectric",
+      "name": "Dielectric Rough",
+      "baseColor": [0.74, 0.82, 0.9, 1],
+      "metallic": 0,
+      "roughness": 0.75
+    },
+    {
+      "id": "mat-metal",
+      "name": "Brushed Metal",
+      "baseColor": [0.9, 0.86, 0.78, 1],
+      "metallic": 1,
+      "roughness": 0.28
+    },
+    {
+      "id": "mat-plastic",
+      "name": "Colored Plastic",
+      "baseColor": [0.92, 0.28, 0.34, 1],
+      "metallic": 0,
+      "roughness": 0.38
+    }
+  ],
+  "meshes": [
+    {
+      "id": "material-spheres",
+      "name": "Material Test Spheres",
+      "model": "/assets/builtin/models/material-test-spheres.glb",
+      "material": "mat-dielectric"
+    }
+  ],
+  "lights": [
+    {
+      "type": "area",
+      "name": "Softbox",
+      "position": [0, 4, 3],
+      "rotation": [-35, 0, 0],
+      "size": [2.5, 1.2, 1],
+      "color": [1, 0.96, 0.9],
+      "intensity": 8
+    }
+  ],
+  "notes": [
+    "Material assignment can be overridden by the PBR Lab to draw each sphere with a different roughness/metallic pair."
+  ]
+}

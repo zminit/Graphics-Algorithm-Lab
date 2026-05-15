@@ -1,0 +1,77 @@
+{
+  "schema": "games-platform.scene-preset",
+  "version": 1,
+  "id": "raytracing-cornell",
+  "name": "Ray Tracing Cornell Starter",
+  "purpose": "A minimal Cornell-style scene description for future path tracing experiments.",
+  "camera": {
+    "position": [0, 1, 4],
+    "target": [0, 1, 0],
+    "fovYDegrees": 38,
+    "near": 0.1,
+    "far": 100
+  },
+  "environment": {
+    "color": [0, 0, 0]
+  },
+  "materials": [
+    {
+      "id": "mat-white",
+      "name": "White Diffuse",
+      "baseColor": [0.78, 0.78, 0.74, 1],
+      "roughness": 0.9
+    },
+    {
+      "id": "mat-red",
+      "name": "Red Wall",
+      "baseColor": [0.78, 0.14, 0.12, 1],
+      "roughness": 0.9
+    },
+    {
+      "id": "mat-green",
+      "name": "Green Wall",
+      "baseColor": [0.12, 0.45, 0.18, 1],
+      "roughness": 0.9
+    }
+  ],
+  "meshes": [
+    {
+      "id": "floor",
+      "name": "Cornell Floor",
+      "model": "/assets/builtin/models/plane.glb",
+      "material": "mat-white",
+      "scale": [2, 1, 2]
+    },
+    {
+      "id": "short-box",
+      "name": "Short Box",
+      "model": "/assets/builtin/models/cube.glb",
+      "material": "mat-white",
+      "position": [-0.45, 0.35, 0.05],
+      "rotation": [0, 20, 0],
+      "scale": [0.55, 0.7, 0.55]
+    },
+    {
+      "id": "tall-box",
+      "name": "Tall Box",
+      "model": "/assets/builtin/models/cube.glb",
+      "material": "mat-white",
+      "position": [0.5, 0.65, -0.35],
+      "rotation": [0, -18, 0],
+      "scale": [0.55, 1.3, 0.55]
+    }
+  ],
+  "lights": [
+    {
+      "type": "area",
+      "name": "Ceiling Area Light",
+      "position": [0, 1.98, 0],
+      "size": [0.65, 0.65, 1],
+      "color": [1, 0.95, 0.86],
+      "intensity": 12
+    }
+  ],
+  "notes": [
+    "This is intentionally simple. Wall geometry can be expanded when the path tracing Lab starts."
+  ]
+}

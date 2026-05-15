@@ -1,0 +1,74 @@
+{
+  "schema": "games-platform.scene-preset",
+  "version": 1,
+  "id": "shadow-test",
+  "name": "Shadow Test",
+  "purpose": "A small scene for shadow map, bias, blocker search, and light frustum experiments.",
+  "camera": {
+    "position": [4, 3, 5],
+    "target": [0, 0.6, 0],
+    "fovYDegrees": 45,
+    "near": 0.1,
+    "far": 100
+  },
+  "environment": {
+    "color": [0.03, 0.04, 0.05]
+  },
+  "materials": [
+    {
+      "id": "mat-floor",
+      "name": "Matte Floor",
+      "baseColor": [0.72, 0.74, 0.72, 1],
+      "roughness": 0.8
+    },
+    {
+      "id": "mat-occluder",
+      "name": "Warm Occluder",
+      "baseColor": [0.88, 0.45, 0.28, 1],
+      "roughness": 0.55
+    },
+    {
+      "id": "mat-cool",
+      "name": "Cool Receiver",
+      "baseColor": [0.32, 0.54, 0.88, 1],
+      "roughness": 0.45
+    }
+  ],
+  "meshes": [
+    {
+      "id": "floor",
+      "name": "Ground Plane",
+      "model": "/assets/builtin/models/plane.glb",
+      "material": "mat-floor",
+      "scale": [6, 1, 6]
+    },
+    {
+      "id": "cube-occluder",
+      "name": "Cube Occluder",
+      "model": "/assets/builtin/models/cube.glb",
+      "material": "mat-occluder",
+      "position": [-0.9, 0.5, -0.2],
+      "scale": [0.8, 1, 0.8]
+    },
+    {
+      "id": "sphere-receiver",
+      "name": "Sphere Receiver",
+      "model": "/assets/builtin/models/sphere.glb",
+      "material": "mat-cool",
+      "position": [1.1, 0.5, 0.8],
+      "scale": [0.55, 0.55, 0.55]
+    }
+  ],
+  "lights": [
+    {
+      "type": "directional",
+      "name": "Key Directional Light",
+      "direction": [-0.55, -1, -0.35],
+      "color": [1, 0.94, 0.86],
+      "intensity": 4
+    }
+  ],
+  "notes": [
+    "Designed to expose shadow acne, peter panning, resolution changes, and light frustum tuning."
+  ]
+}
