@@ -11,6 +11,7 @@ export type LabRuntimeOptions = WebGPUState & {
   guiRoot: HTMLElement;
   debugRoot: HTMLElement;
   onStatus?: (message: string, tone?: "ready" | "error" | "loading") => void;
+  onLog?: (level: "info" | "warn" | "error", message: string) => void;
 };
 
 export class LabRuntime {
@@ -40,6 +41,7 @@ export class LabRuntime {
     const ctx = this.createContext();
 
     this.options.onStatus?.(`Loading ${lab.name}`, "loading");
+    this.options.onLog?.("info", `Loading lab: ${lab.name}`);
     this.activeLab?.dispose?.(ctx);
     this.gui.clear();
     this.debug.clear();
@@ -54,6 +56,7 @@ export class LabRuntime {
     await lab.setup?.(ctx);
     lab.resize?.(ctx);
     this.options.onStatus?.(`${lab.name} ready`, "ready");
+    this.options.onLog?.("info", `Lab ready: ${lab.name}`);
   }
 
   start() {
@@ -108,7 +111,9 @@ export class LabRuntime {
       lab.update?.(ctx);
       lab.render(ctx);
     } catch (error) {
-      this.options.onStatus?.(error instanceof Error ? error.message : String(error), "error");
+      const message = error instanceof Error ? error.stack || error.message : String(error);
+      this.options.onStatus?.(message, "error");
+      this.options.onLog?.("error", message);
       console.error(error);
       this.stop();
     }

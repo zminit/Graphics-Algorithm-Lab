@@ -41,6 +41,19 @@
             <div id="debug-root"></div>
           </aside>
         </div>
+        <section class="log-panel" id="log-panel" aria-label="Runtime log panel">
+          <button class="log-toggle" id="log-toggle" type="button" aria-expanded="false">
+            <span>Runtime Log</span>
+            <span class="log-count" id="log-count">0</span>
+          </button>
+          <div class="log-body" id="log-body" hidden>
+            <div class="log-toolbar">
+              <span id="log-summary">No logs yet.</span>
+              <button id="log-clear" type="button">Clear</button>
+            </div>
+            <div class="log-list" id="log-list" role="log" aria-live="polite"></div>
+          </div>
+        </section>
       </section>
     </main>
     <script type="module" src="/src/main.ts"></script>

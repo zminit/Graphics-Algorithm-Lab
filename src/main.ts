@@ -4,6 +4,7 @@ import { loadScenePreset } from "./core/assets/loadScene";
 import type { WebGPUState } from "./core/gpu/WebGPUState";
 import { LabRuntime } from "./core/lab/LabRuntime";
 import type { Lab } from "./core/lab/Lab";
+import { RuntimeLogger } from "./core/log/RuntimeLogger";
 import { createLabRegistry } from "./labs/registerLabs";
 
 function queryRequiredElement<T extends Element>(selector: string): T {
@@ -25,10 +26,20 @@ const guiRoot = queryRequiredElement<HTMLElement>("#gui-root");
 const debugRoot = queryRequiredElement<HTMLElement>("#debug-root");
 const workspace = queryRequiredElement<HTMLElement>(".workspace");
 const panelResizer = queryRequiredElement<HTMLElement>("#panel-resizer");
+const logPanel = queryRequiredElement<HTMLElement>("#log-panel");
+const logToggle = queryRequiredElement<HTMLButtonElement>("#log-toggle");
+const logCount = queryRequiredElement<HTMLElement>("#log-count");
+const logSummary = queryRequiredElement<HTMLElement>("#log-summary");
+const logList = queryRequiredElement<HTMLElement>("#log-list");
+const logBody = queryRequiredElement<HTMLElement>("#log-body");
+const logClear = queryRequiredElement<HTMLButtonElement>("#log-clear");
+
+const logger = new RuntimeLogger(logPanel, logToggle, logCount, logSummary, logList, logBody, logClear);
 
 function setStatus(message: string, tone: "ready" | "error" | "loading" = "loading") {
   statusElement.textContent = message;
   statusElement.dataset.tone = tone;
+  logger.add(tone === "error" ? "error" : "info", message);
 }
 
 async function initWebGPU(target: HTMLCanvasElement): Promise<WebGPUState> {
@@ -150,6 +161,7 @@ async function start() {
       guiRoot,
       debugRoot,
       onStatus: setStatus,
+      onLog: (level, message) => logger.add(level, message),
     });
     const adapterInfo = state.adapter.info;
     const gpuName = adapterInfo?.description || "WebGPU Ready";
