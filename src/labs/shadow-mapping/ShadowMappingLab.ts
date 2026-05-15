@@ -282,8 +282,9 @@ export class ShadowMappingLab implements Lab {
     }
 
     const bg = this.params.background;
-    const commandEncoder = ctx.device.createCommandEncoder();
-    const shadowPass = commandEncoder.beginRenderPass({
+    const shadowEncoder = ctx.device.createCommandEncoder({ label: "Shadow Map Encoder" });
+    const shadowPass = shadowEncoder.beginRenderPass({
+      label: "Shadow Depth Pass",
       colorAttachments: [],
       depthStencilAttachment: {
         view: this.shadowDepthTexture.createView(),
@@ -301,9 +302,12 @@ export class ShadowMappingLab implements Lab {
       shadowPass.drawIndexed(item.gpuMesh.indexCount);
     }
     shadowPass.end();
+    ctx.device.queue.submit([shadowEncoder.finish()]);
 
+    const mainEncoder = ctx.device.createCommandEncoder({ label: "Shadow Resolve Encoder" });
     const currentTexture = ctx.context.getCurrentTexture();
-    const mainPass = commandEncoder.beginRenderPass({
+    const mainPass = mainEncoder.beginRenderPass({
+      label: "Shadow Resolve Pass",
       colorAttachments: [
         {
           view: this.colorTexture.createView(),
@@ -330,12 +334,12 @@ export class ShadowMappingLab implements Lab {
     }
     mainPass.end();
 
-    commandEncoder.copyTextureToTexture(
+    mainEncoder.copyTextureToTexture(
       { texture: this.colorTexture },
       { texture: currentTexture },
       { width: ctx.canvas.width, height: ctx.canvas.height },
     );
-    ctx.device.queue.submit([commandEncoder.finish()]);
+    ctx.device.queue.submit([mainEncoder.finish()]);
   }
 
   dispose() {

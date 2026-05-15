@@ -104,8 +104,14 @@ export class LabRuntime {
 
     const ctx = this.createContext();
     this.controls.update();
-    lab.update?.(ctx);
-    lab.render(ctx);
+    try {
+      lab.update?.(ctx);
+      lab.render(ctx);
+    } catch (error) {
+      this.options.onStatus?.(error instanceof Error ? error.message : String(error), "error");
+      console.error(error);
+      this.stop();
+    }
   }
 
   private resizeCanvas() {

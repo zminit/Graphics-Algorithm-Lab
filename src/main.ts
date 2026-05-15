@@ -182,7 +182,7 @@ async function start() {
     });
     setupPanelResize(() => runtime.resize());
 
-    const defaultLab = registry.get("shadow-mapping");
+    const defaultLab = registry.get("basic-mesh");
     labSelect.value = defaultLab.id;
     labSelect.disabled = false;
     await switchLab(defaultLab.id);
