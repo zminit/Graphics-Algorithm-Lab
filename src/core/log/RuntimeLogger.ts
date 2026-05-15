@@ -5,12 +5,14 @@ type LogEntry = {
   level: LogLevel;
   message: string;
   time: Date;
+  repeat: number;
 };
 
 export class RuntimeLogger {
   private entries: LogEntry[] = [];
   private nextId = 1;
   private expanded = false;
+  private renderFrame = 0;
   private readonly storageKey = "games-platform.log-expanded";
 
   constructor(
@@ -42,11 +44,21 @@ export class RuntimeLogger {
   }
 
   add(level: LogLevel, message: string) {
+    const normalized = normalizeMessage(message);
+    const last = this.entries.at(-1);
+    if (last && last.level === level && last.message === normalized) {
+      last.repeat += 1;
+      last.time = new Date();
+      this.scheduleRender();
+      return;
+    }
+
     this.entries.push({
       id: this.nextId,
       level,
-      message,
+      message: normalized,
       time: new Date(),
+      repeat: 1,
     });
     this.nextId += 1;
 
@@ -54,12 +66,12 @@ export class RuntimeLogger {
       this.entries = this.entries.slice(-300);
     }
 
-    this.render();
+    this.scheduleRender();
   }
 
   clear() {
     this.entries = [];
-    this.render();
+    this.scheduleRender();
   }
 
   private setExpanded(expanded: boolean) {
@@ -71,6 +83,7 @@ export class RuntimeLogger {
   }
 
   private render() {
+    this.renderFrame = 0;
     this.count.textContent = String(this.entries.length);
     const last = this.entries.at(-1);
     this.summary.textContent = last ? `${last.level.toUpperCase()} · ${last.message}` : "No logs yet.";
@@ -85,7 +98,9 @@ export class RuntimeLogger {
 
     const meta = document.createElement("span");
     meta.className = "log-meta";
-    meta.textContent = `${entry.time.toLocaleTimeString()} ${entry.level.toUpperCase()}`;
+    meta.textContent = `${entry.time.toLocaleTimeString()} ${entry.level.toUpperCase()}${
+      entry.repeat > 1 ? ` x${entry.repeat}` : ""
+    }`;
 
     const message = document.createElement("pre");
     message.textContent = entry.message;
@@ -93,4 +108,16 @@ export class RuntimeLogger {
     row.append(meta, message);
     return row;
   }
+
+  private scheduleRender() {
+    if (this.renderFrame) {
+      return;
+    }
+
+    this.renderFrame = requestAnimationFrame(() => this.render());
+  }
+}
+
+function normalizeMessage(message: string) {
+  return message.trim() || "(empty log message)";
 }

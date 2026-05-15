@@ -40,6 +40,7 @@ export class LabRuntime {
   async setLab(lab: Lab) {
     const ctx = this.createContext();
 
+    this.stop();
     this.options.onStatus?.(`Loading ${lab.name}`, "loading");
     this.options.onLog?.("info", `Loading lab: ${lab.name}`);
     this.activeLab?.dispose?.(ctx);
@@ -57,6 +58,7 @@ export class LabRuntime {
     lab.resize?.(ctx);
     this.options.onStatus?.(`${lab.name} ready`, "ready");
     this.options.onLog?.("info", `Lab ready: ${lab.name}`);
+    this.start();
   }
 
   start() {
@@ -79,6 +81,12 @@ export class LabRuntime {
 
     cancelAnimationFrame(this.animationFrameId);
     this.animationFrameId = 0;
+  }
+
+  pauseForError(message: string) {
+    this.options.onStatus?.(message, "error");
+    this.options.onLog?.("error", message);
+    this.stop();
   }
 
   dispose() {

@@ -53,10 +53,6 @@ async function initWebGPU(target: HTMLCanvasElement): Promise<WebGPUState> {
   }
 
   const device = await adapter.requestDevice();
-  device.addEventListener("uncapturederror", (event) => {
-    setStatus(event.error.message, "error");
-    console.error(event.error);
-  });
   const context = target.getContext("webgpu");
   if (!context) {
     throw new Error("Could not create a WebGPU canvas context.");
@@ -163,6 +159,10 @@ async function start() {
       onStatus: setStatus,
       onLog: (level, message) => logger.add(level, message),
     });
+    state.device.addEventListener("uncapturederror", (event) => {
+      runtime.pauseForError(event.error.message);
+      console.error(event.error);
+    });
     const adapterInfo = state.adapter.info;
     const gpuName = adapterInfo?.description || "WebGPU Ready";
     const labs = registry.list();
@@ -183,8 +183,8 @@ async function start() {
 
     labSelect.addEventListener("change", () => {
       void switchLab(labSelect.value).catch((error: unknown) => {
-        const message = error instanceof Error ? error.message : String(error);
-        setStatus(message, "error");
+        const message = error instanceof Error ? error.stack || error.message : String(error);
+        runtime.pauseForError(message);
         console.error(error);
       });
     });
@@ -198,7 +198,6 @@ async function start() {
     labSelect.value = defaultLab.id;
     labSelect.disabled = false;
     await switchLab(defaultLab.id);
-    runtime.start();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     setStatus(message, "error");
