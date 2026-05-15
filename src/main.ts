@@ -22,6 +22,8 @@ const labSelect = queryRequiredElement<HTMLSelectElement>("#lab-select");
 const labTitle = queryRequiredElement<HTMLElement>("#lab-title");
 const labDescription = queryRequiredElement<HTMLElement>("#lab-description");
 const guiRoot = queryRequiredElement<HTMLElement>("#gui-root");
+const workspace = queryRequiredElement<HTMLElement>(".workspace");
+const panelResizer = queryRequiredElement<HTMLElement>("#panel-resizer");
 
 function setStatus(message: string, tone: "ready" | "error" | "loading" = "loading") {
   statusElement.textContent = message;
@@ -57,6 +59,78 @@ async function initWebGPU(target: HTMLCanvasElement): Promise<WebGPUState> {
 function setActiveLabDetails(lab: Lab) {
   labTitle.textContent = lab.name;
   labDescription.textContent = lab.description || "No description.";
+}
+
+function setupPanelResize(onResize: () => void) {
+  const storageKey = "games-platform.side-panel-width";
+  const minWidth = 300;
+  const maxWidth = 640;
+  const savedWidth = Number(localStorage.getItem(storageKey));
+  let currentWidth = Number.isFinite(savedWidth) ? savedWidth : 360;
+
+  if (Number.isFinite(savedWidth)) {
+    setPanelWidth(savedWidth);
+  }
+
+  const applyFromClientX = (clientX: number) => {
+    const rect = workspace.getBoundingClientRect();
+    const nextWidth = rect.right - clientX;
+    setPanelWidth(nextWidth);
+    onResize();
+  };
+
+  panelResizer.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    panelResizer.setPointerCapture(event.pointerId);
+    workspace.dataset.resizing = "true";
+    applyFromClientX(event.clientX);
+  });
+
+  panelResizer.addEventListener("pointermove", (event) => {
+    if (!panelResizer.hasPointerCapture(event.pointerId)) {
+      return;
+    }
+
+    applyFromClientX(event.clientX);
+  });
+
+  panelResizer.addEventListener("pointerup", (event) => {
+    if (!panelResizer.hasPointerCapture(event.pointerId)) {
+      return;
+    }
+
+    panelResizer.releasePointerCapture(event.pointerId);
+    workspace.dataset.resizing = "false";
+    localStorage.setItem(storageKey, String(currentWidth));
+  });
+
+  panelResizer.addEventListener("pointercancel", (event) => {
+    if (panelResizer.hasPointerCapture(event.pointerId)) {
+      panelResizer.releasePointerCapture(event.pointerId);
+    }
+    workspace.dataset.resizing = "false";
+  });
+
+  panelResizer.addEventListener("keydown", (event) => {
+    const current = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--side-panel-width"));
+    if (event.key === "ArrowLeft") {
+      setPanelWidth(current + 24);
+      onResize();
+      event.preventDefault();
+    }
+    if (event.key === "ArrowRight") {
+      setPanelWidth(current - 24);
+      onResize();
+      event.preventDefault();
+    }
+  });
+
+  function setPanelWidth(width: number) {
+    const viewportMax = Math.max(minWidth, Math.min(maxWidth, window.innerWidth - 360));
+    const clamped = Math.max(minWidth, Math.min(viewportMax, width));
+    currentWidth = Math.round(clamped);
+    document.documentElement.style.setProperty("--side-panel-width", `${currentWidth}px`);
+  }
 }
 
 async function start() {
@@ -99,6 +173,7 @@ async function start() {
     window.addEventListener("resize", () => {
       runtime.resize();
     });
+    setupPanelResize(() => runtime.resize());
 
     const defaultLab = registry.getDefault();
     labSelect.value = defaultLab.id;
