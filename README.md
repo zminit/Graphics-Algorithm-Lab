@@ -58,10 +58,11 @@ src/core/lab/
 src/labs/clear-color/
 src/labs/triangle/
 src/labs/basic-mesh/
+src/labs/pipeline-basic-mesh/
 src/labs/shadow-mapping/
 ```
 
-应用启动后会显示实验选择器，可以在 `Clear Color`、`Triangle`、`Basic Mesh` 和 `Shadow Mapping` 之间切换，用于验证 Lab 的 `setup`、`render`、`dispose` 和运行时切换流程。
+应用启动后会显示实验选择器，可以在 `Clear Color`、`Triangle`、`Basic Mesh`、`Pipeline Basic Mesh` 和 `Shadow Mapping` 之间切换，用于验证 Lab 的 `setup`、`render`、`dispose` 和运行时切换流程。
 
 `Basic Mesh` 会加载内置 `shadow-test` 场景，显示 plane、cube、sphere，并支持 Orbit Camera：
 
@@ -95,6 +96,32 @@ vec3
 - Load：读取当前 Lab 保存过的参数
 
 `Basic Mesh` 当前注册了背景色、环境光、光照强度、着色模式、自动旋转和旋转速度参数。
+
+## Pipeline Lab
+
+Pipeline Lab 核心位于：
+
+```text
+src/core/pipeline/
+```
+
+当前第一版支持：
+
+- `definePipelineLab`
+- `meshPass`
+- 手写 WGSL shader 文件
+- 默认 mesh 顶点布局：position / normal / uv
+- built-in uniforms：frame、params、object、material
+- Hybrid binding：既可使用 `"default"`，也可显式声明 `group/binding/source`
+
+示例实验：
+
+```text
+src/labs/pipeline-basic-mesh/
+public/shaders/pipeline/basic-mesh.wgsl
+```
+
+`Pipeline Basic Mesh` 使用显式 uniform bindings，以便接近原生 WebGPU 的资源绑定模型，但仍由平台代创建 pipeline layout、bind group、uniform buffer 和 draw loop。
 
 ## Debug View
 
