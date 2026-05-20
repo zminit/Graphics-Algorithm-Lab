@@ -18,6 +18,15 @@
               <span>Lab</span>
               <select id="lab-select" disabled></select>
             </label>
+            <button
+              class="help-button"
+              id="help-toggle"
+              type="button"
+              aria-expanded="false"
+              aria-controls="help-dialog"
+            >
+              帮助
+            </button>
             <div class="status-pill" id="gpu-status">Initializing WebGPU</div>
           </div>
         </header>
@@ -40,6 +49,148 @@
             <div class="panel-divider"></div>
             <div id="debug-root"></div>
           </aside>
+        </div>
+        <div class="help-overlay" id="help-overlay" hidden>
+          <section
+            class="help-dialog"
+            id="help-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="help-title"
+          >
+            <header class="help-header">
+              <div>
+                <p class="eyebrow">Documentation</p>
+                <h2 id="help-title">实验平台使用指南</h2>
+              </div>
+              <button class="help-close" id="help-close" type="button">关闭</button>
+            </header>
+            <div class="help-content">
+              <nav class="help-nav" aria-label="Help sections">
+                <a href="#help-start">开始实验</a>
+                <a href="#help-assets">资源文件</a>
+                <a href="#help-code">算法代码</a>
+                <a href="#help-pipeline">Pipeline Lab</a>
+                <a href="#help-bindings">Binding 接口</a>
+                <a href="#help-wgsl">WGSL 约定</a>
+                <a href="#help-debug">调试与日志</a>
+              </nav>
+              <article class="help-doc">
+                <section class="help-section" id="help-start">
+                  <h3>开始实验</h3>
+                  <p>
+                    顶部 Lab 选择框用于切换实验。右侧面板显示当前实验的参数、Debug View 和贴图预览。
+                    底部 Runtime Log 用来查看 WebGPU、shader 编译和运行时错误。
+                  </p>
+                  <p>
+                    学习算法时优先使用 <code>Pipeline Basic Mesh</code> 这种声明式实验：
+                    平台负责相机、场景、mesh 上传、pipeline 创建和 draw loop，你主要改实验声明和 WGSL。
+                  </p>
+                </section>
+
+                <section class="help-section" id="help-assets">
+                  <h3>资源文件在哪里</h3>
+                  <p>运行时静态资源统一放在 <code>public/assets/</code>，浏览器中直接用以 <code>/assets/</code> 开头的路径访问。</p>
+                  <div class="help-path-grid">
+                    <span>模型</span><code>public/assets/builtin/models/</code>
+                    <span>纹理</span><code>public/assets/builtin/textures/</code>
+                    <span>场景</span><code>public/assets/builtin/scenes/</code>
+                    <span>HDR</span><code>public/assets/builtin/hdr/</code>
+                    <span>资源索引</span><code>src/core/assets/BuiltinAssets.ts</code>
+                  </div>
+                  <p>
+                    内置基础资源由 <code>tools/assets/generate-builtins.mjs</code> 生成。
+                    需要重新生成基础模型、调试纹理和场景 preset 时运行：
+                  </p>
+                  <pre><code>npm run assets:generate</code></pre>
+                </section>
+
+                <section class="help-section" id="help-code">
+                  <h3>算法代码要在哪里写</h3>
+                  <p>
+                    新算法推荐新建 <code>src/labs/&lt;lab-name&gt;/&lt;Name&gt;Lab.ts</code>，
+                    然后在 <code>src/labs/registerLabs.ts</code> 注册。shader 文件放在 <code>public/shaders/</code> 下。
+                  </p>
+                  <p>当前最小示例：</p>
+                  <div class="help-path-grid">
+                    <span>Lab 声明</span><code>src/labs/pipeline-basic-mesh/PipelineBasicMeshLab.ts</code>
+                    <span>WGSL</span><code>public/shaders/pipeline/basic-mesh.wgsl</code>
+                    <span>底层接口</span><code>src/core/pipeline/</code>
+                  </div>
+                  <p>
+                    如果算法必须完全控制 WebGPU，例如自定义多 render target、compute pass 或特殊资源生命周期，
+                    可以直接实现传统 <code>Lab</code> 接口；如果只是改渲染方程、顶点处理、光照或材质计算，优先用 Pipeline Lab。
+                  </p>
+                </section>
+
+                <section class="help-section" id="help-pipeline">
+                  <h3>Pipeline Lab 最小写法</h3>
+                  <p>这个写法把工程样板压到最低，同时保留手写 shader 和显式资源绑定的学习空间。</p>
+                  <pre><code>export const MyLab = definePipelineLab({
+  id: "my-lab",
+  name: "My Lab",
+  scene: BuiltinAssets.scenes.shadowTest,
+  params: {
+    ambient: float(0.2, { min: 0, max: 1, step: 0.01 }),
+  },
+  passes: [
+    meshPass({
+      name: "Main",
+      shader: "/shaders/my-lab/main.wgsl",
+      bindings: "default",
+      color: "screen",
+      depth: "auto",
+    }),
+  ],
+});</code></pre>
+                </section>
+
+                <section class="help-section" id="help-bindings">
+                  <h3>Binding 接口怎么用</h3>
+                  <p>
+                    <code>bindings: "default"</code> 会使用平台默认 uniform 布局。
+                    想更接近原生 WebGPU 时，可以显式声明 <code>group</code>、<code>binding</code> 和资源来源：
+                  </p>
+                  <pre><code>bindings: [
+  uniform("frame", { group: 0, binding: 0, source: "frame" }),
+  uniform("params", { group: 0, binding: 1, source: "params" }),
+  uniform("object", { group: 1, binding: 0, source: "object" }),
+  uniform("material", { group: 1, binding: 1, source: "material" }),
+]</code></pre>
+                  <p>
+                    当前 v1 已支持自定义 uniform binding。texture、sampler、fullscreen pass、render target alias 和 compute pass
+                    会作为下一批 Pipeline Lab 能力继续扩展。
+                  </p>
+                </section>
+
+                <section class="help-section" id="help-wgsl">
+                  <h3>WGSL 约定</h3>
+                  <p>默认 mesh 顶点布局是 <code>position / normal / uv</code>，shader 入口固定为 <code>vertexMain</code> 和 <code>fragmentMain</code>。</p>
+                  <pre><code>@group(0) @binding(0) var&lt;uniform&gt; frame: FrameUniforms;
+@group(0) @binding(1) var&lt;uniform&gt; params: ParamsUniforms;
+@group(1) @binding(0) var&lt;uniform&gt; object: ObjectUniforms;
+@group(1) @binding(1) var&lt;uniform&gt; material: MaterialUniforms;</code></pre>
+                  <p>
+                    <code>frame</code> 提供相机矩阵、画布尺寸和时间；
+                    <code>params</code> 来自右侧 GUI；
+                    <code>object</code> 提供模型矩阵和 MVP；
+                    <code>material</code> 提供基础材质参数。
+                  </p>
+                </section>
+
+                <section class="help-section" id="help-debug">
+                  <h3>调试与日志</h3>
+                  <p>
+                    Lab 可以通过 <code>ctx.gui.add(...)</code> 注册右侧参数，通过 <code>ctx.debug.addTexture(...)</code>
+                    注册 Debug View 纹理。运行时报错会进入底部 Runtime Log，右上角状态只展示简短摘要。
+                  </p>
+                  <p>
+                    如果遇到 shader 编译失败，先展开 Runtime Log 复制完整错误，再检查 WGSL 的 binding、入口函数和 uniform 结构体是否与 Lab 声明一致。
+                  </p>
+                </section>
+              </article>
+            </div>
+          </section>
         </div>
         <section class="log-panel" id="log-panel" aria-label="Runtime log panel">
           <button class="log-toggle" id="log-toggle" type="button" aria-expanded="false">

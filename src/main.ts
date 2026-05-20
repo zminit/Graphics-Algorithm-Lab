@@ -26,6 +26,9 @@ const guiRoot = queryRequiredElement<HTMLElement>("#gui-root");
 const debugRoot = queryRequiredElement<HTMLElement>("#debug-root");
 const workspace = queryRequiredElement<HTMLElement>(".workspace");
 const panelResizer = queryRequiredElement<HTMLElement>("#panel-resizer");
+const helpToggle = queryRequiredElement<HTMLButtonElement>("#help-toggle");
+const helpOverlay = queryRequiredElement<HTMLElement>("#help-overlay");
+const helpClose = queryRequiredElement<HTMLButtonElement>("#help-close");
 const logPanel = queryRequiredElement<HTMLElement>("#log-panel");
 const logToggle = queryRequiredElement<HTMLButtonElement>("#log-toggle");
 const logCount = queryRequiredElement<HTMLElement>("#log-count");
@@ -146,6 +149,45 @@ function setupPanelResize(onResize: () => void) {
   }
 }
 
+function setupHelpDialog() {
+  let restoreFocusTo: HTMLElement | null = null;
+
+  const openHelp = () => {
+    restoreFocusTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    helpOverlay.hidden = false;
+    helpToggle.setAttribute("aria-expanded", "true");
+    helpClose.focus();
+  };
+
+  const closeHelp = () => {
+    helpOverlay.hidden = true;
+    helpToggle.setAttribute("aria-expanded", "false");
+    restoreFocusTo?.focus();
+  };
+
+  helpToggle.addEventListener("click", () => {
+    if (helpOverlay.hidden) {
+      openHelp();
+    } else {
+      closeHelp();
+    }
+  });
+
+  helpClose.addEventListener("click", closeHelp);
+
+  helpOverlay.addEventListener("click", (event) => {
+    if (event.target === helpOverlay) {
+      closeHelp();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !helpOverlay.hidden) {
+      closeHelp();
+    }
+  });
+}
+
 async function start() {
   try {
     const state = await initWebGPU(canvas);
@@ -205,4 +247,5 @@ async function start() {
   }
 }
 
+setupHelpDialog();
 void start();
