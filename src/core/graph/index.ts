@@ -25,6 +25,8 @@ export type {
   GraphBinding,
   GraphFullscreenPassSpec,
   GraphLabSpec,
+  GraphMaterialInstance,
+  GraphMaterialTextureSlot,
   GraphMeshPassSpec,
   GraphPassSpec,
   GraphResourceSpec,

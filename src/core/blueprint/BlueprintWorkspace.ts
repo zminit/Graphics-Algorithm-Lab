@@ -1,4 +1,3 @@
-import type { LabRegistry } from "../lab/LabRegistry";
 import {
   createDefaultGraphDocument,
   validateEditableGraphDocument,
@@ -8,10 +7,8 @@ import { UserLabStore } from "./UserLabStore";
 import { WgslEditor } from "./WgslEditor";
 
 export type BlueprintWorkspaceOptions = {
-  registry: LabRegistry;
   store: UserLabStore;
-  onLabsChanged: (preferredLabId?: string) => Promise<void> | void;
-  onRunLab: (labId: string) => Promise<void> | void;
+  onBlueprintsChanged: () => Promise<void> | void;
   onLog: (level: "info" | "warn" | "error", message: string) => void;
 };
 
@@ -46,10 +43,9 @@ export class BlueprintWorkspace {
       <section class="blueprint-window" role="dialog" aria-modal="true" aria-label="Blueprint Workspace">
         <header class="blueprint-toolbar">
           <strong>Blueprint Workspace</strong>
-          <select class="blueprint-lab-select" aria-label="User Lab"></select>
+          <select class="blueprint-lab-select" aria-label="Blueprint"></select>
           <button type="button" data-action="new">New</button>
           <button type="button" data-action="save">Save</button>
-          <button type="button" data-action="run">Run</button>
           <button type="button" data-action="validate">Validate</button>
           <button type="button" data-action="close">Close</button>
         </header>
@@ -109,7 +105,6 @@ export class BlueprintWorkspace {
       const nodeKind = target.dataset.node as NodeKind | undefined;
       if (action === "new") this.createNew();
       if (action === "save") void this.save();
-      if (action === "run") void this.run();
       if (action === "validate") this.validate();
       if (action === "close") this.close();
       if (nodeKind) this.addNode(nodeKind);
@@ -159,10 +154,10 @@ export class BlueprintWorkspace {
   private createNew() {
     const suffix = Math.round(Date.now() / 1000);
     this.document = createDefaultGraphDocument(`my-graph-lab-${suffix}`);
-    this.document.name = `My Graph Lab ${suffix}`;
+    this.document.name = `My Blueprint ${suffix}`;
     this.selectedNodeId = "pass:Scene Mesh Pass";
     this.render();
-    this.setStatus("Created a new Graph Lab draft.");
+    this.setStatus("Created a new Blueprint draft.");
   }
 
   private async save(): Promise<boolean> {
@@ -173,18 +168,10 @@ export class BlueprintWorkspace {
       return false;
     }
     await this.options.store.save(this.document);
-    this.options.registry.replace(this.options.store.toLab(this.document));
-    await this.options.onLabsChanged(this.document.id);
+    await this.options.onBlueprintsChanged();
     await this.refreshLabList();
-    this.setStatus(`Saved ${this.document.id}.`);
+    this.setStatus(`Saved blueprint ${this.document.id}.`);
     return true;
-  }
-
-  private async run() {
-    if (!(await this.save())) {
-      return;
-    }
-    await this.options.onRunLab(this.document.id);
   }
 
   private validate() {

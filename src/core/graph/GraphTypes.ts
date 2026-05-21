@@ -91,6 +91,19 @@ export type GraphLabSpec = {
   resources: Record<string, GraphResourceSpec>;
   passes: GraphPassSpec[];
   output: string;
+  materialInstances?: GraphMaterialInstance[];
+  materialAssignments?: Record<string, string>;
+};
+
+export type GraphMaterialTextureSlot = "baseColorTexture" | "normalTexture";
+
+export type GraphMaterialInstance = {
+  id: string;
+  name: string;
+  baseColor: [number, number, number, number];
+  metallic?: number;
+  roughness?: number;
+  textures?: Partial<Record<GraphMaterialTextureSlot, string>>;
 };
 
 export type GraphNodeInfo = {

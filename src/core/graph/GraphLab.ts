@@ -8,6 +8,7 @@ import type {
   GraphBinding,
   GraphEdgeInfo,
   GraphLabSpec,
+  GraphMaterialInstance,
   GraphNodeInfo,
   GraphPassSpec,
   GraphResourceSpec,
@@ -31,12 +32,19 @@ type RuntimeSampler = {
 
 type RenderItem = {
   sceneMesh: SceneMesh;
-  material: SceneMaterial;
+  material: RuntimeMaterial;
   gpuMesh: GPUMesh;
   modelMatrix: Mat4;
   objectBuffer: GPUBuffer;
   materialBuffer: GPUBuffer;
   bindGroups: Map<string, GPUBindGroup>;
+};
+
+type RuntimeMaterial = GraphMaterialInstance & {
+  fallbackSceneMaterial?: SceneMaterial;
+  baseColorTexture?: GPUTexture;
+  normalTexture?: GPUTexture;
+  sampler?: GPUSampler;
 };
 
 type CompiledPass = {
@@ -124,9 +132,18 @@ class GraphLabRunner implements Lab {
       objectData.set(modelViewProjection, 16);
       ctx.device.queue.writeBuffer(item.objectBuffer, 0, objectData);
 
-      const materialData = new Float32Array(8);
+      const materialData = new Float32Array(12);
       materialData.set(item.material.baseColor, 0);
-      materialData.set([item.material.metallic ?? 0, item.material.roughness ?? 0.5, 0, 0], 4);
+      materialData.set(
+        [
+          item.material.metallic ?? 0,
+          item.material.roughness ?? 0.5,
+          0,
+          0,
+        ],
+        4,
+      );
+      materialData.set([item.material.baseColorTexture ? 1 : 0, item.material.normalTexture ? 1 : 0, 0, 0], 8);
       ctx.device.queue.writeBuffer(item.materialBuffer, 0, materialData);
     }
   }
@@ -169,6 +186,8 @@ class GraphLabRunner implements Lab {
       destroyGPUMesh(item.gpuMesh);
       item.objectBuffer.destroy();
       item.materialBuffer.destroy();
+      item.material.baseColorTexture?.destroy();
+      item.material.normalTexture?.destroy();
     }
     this.passes = [];
     this.renderItems = [];
@@ -245,12 +264,14 @@ class GraphLabRunner implements Lab {
       return;
     }
 
-    const materials = new Map(this.scene.materials.map((material) => [material.id, material]));
+    const sceneMaterials = new Map(this.scene.materials.map((material) => [material.id, material]));
+    const materialInstances = createMaterialInstances(this.spec, this.scene);
     for (const sceneMesh of this.scene.meshes) {
-      const material = materials.get(sceneMesh.material);
-      if (!material) {
+      const sceneMaterial = sceneMaterials.get(sceneMesh.material);
+      if (!sceneMaterial) {
         throw new Error(`Missing material: ${sceneMesh.material}`);
       }
+      const material = await createRuntimeMaterial(ctx, sceneMesh, sceneMaterial, materialInstances, this.spec.materialAssignments ?? {});
       const cpuMesh = (await ctx.assets.loadGLB(sceneMesh.model))[0];
       if (!cpuMesh) {
         throw new Error(`Model has no mesh: ${sceneMesh.model}`);
@@ -268,7 +289,7 @@ class GraphLabRunner implements Lab {
         }),
         materialBuffer: ctx.device.createBuffer({
           label: `${sceneMesh.name} Graph Material`,
-          size: 32,
+          size: 48,
           usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         }),
         bindGroups: new Map(),
@@ -350,12 +371,20 @@ class GraphLabRunner implements Lab {
     for (const item of this.renderItems) {
       const entries: GPUBindGroupEntry[] = [];
       for (const binding of groupBindings) {
-        if (binding.kind !== "uniform") continue;
-        if (binding.source === "object") {
+        if (binding.kind === "uniform" && binding.source === "object") {
           entries.push({ binding: binding.binding, resource: { buffer: item.objectBuffer } });
         }
-        if (binding.source === "material") {
+        if (binding.kind === "uniform" && binding.source === "material") {
           entries.push({ binding: binding.binding, resource: { buffer: item.materialBuffer } });
+        }
+        if (binding.kind === "texture" && binding.source === "material.baseColorTexture") {
+          entries.push({ binding: binding.binding, resource: item.material.baseColorTexture!.createView() });
+        }
+        if (binding.kind === "texture" && binding.source === "material.normalTexture") {
+          entries.push({ binding: binding.binding, resource: item.material.normalTexture!.createView() });
+        }
+        if (binding.kind === "sampler" && binding.source === "material.sampler") {
+          entries.push({ binding: binding.binding, resource: item.material.sampler! });
         }
       }
       if (entries.length) {
@@ -447,6 +476,88 @@ function createTextures(ctx: LabContext, spec: GraphLabSpec): Map<string, Runtim
   return textures;
 }
 
+function createMaterialInstances(spec: GraphLabSpec, scene: ScenePreset) {
+  const materials = new Map<string, GraphMaterialInstance>();
+  for (const material of spec.materialInstances ?? []) {
+    materials.set(material.id, material);
+  }
+  for (const sceneMaterial of scene.materials) {
+    if (!materials.has(sceneMaterial.id)) {
+      materials.set(sceneMaterial.id, {
+        id: sceneMaterial.id,
+        name: sceneMaterial.name,
+        baseColor: sceneMaterial.baseColor,
+        metallic: sceneMaterial.metallic ?? 0,
+        roughness: sceneMaterial.roughness ?? 0.5,
+        textures: {
+          baseColorTexture: sceneMaterial.baseColorTexture ?? "/assets/builtin/textures/white.png",
+          normalTexture: sceneMaterial.normalTexture ?? "/assets/builtin/textures/flat-normal.png",
+        },
+      });
+    }
+  }
+  return materials;
+}
+
+async function createRuntimeMaterial(
+  ctx: LabContext,
+  sceneMesh: SceneMesh,
+  sceneMaterial: SceneMaterial,
+  materialInstances: Map<string, GraphMaterialInstance>,
+  assignments: Record<string, string>,
+): Promise<RuntimeMaterial> {
+  const materialId = assignments[sceneMesh.id] ?? sceneMesh.material;
+  const material = materialInstances.get(materialId) ?? materialInstances.get(sceneMesh.material) ?? {
+    id: sceneMaterial.id,
+    name: sceneMaterial.name,
+    baseColor: sceneMaterial.baseColor,
+    metallic: sceneMaterial.metallic ?? 0,
+    roughness: sceneMaterial.roughness ?? 0.5,
+    textures: {
+      baseColorTexture: sceneMaterial.baseColorTexture ?? "/assets/builtin/textures/white.png",
+      normalTexture: sceneMaterial.normalTexture ?? "/assets/builtin/textures/flat-normal.png",
+    },
+  };
+  const runtime: RuntimeMaterial = {
+    ...material,
+    textures: { ...material.textures },
+    fallbackSceneMaterial: sceneMaterial,
+    sampler: ctx.device.createSampler({
+      label: `${sceneMesh.name} Material Sampler`,
+      magFilter: "linear",
+      minFilter: "linear",
+    }),
+  };
+  runtime.baseColorTexture = await loadTexture2D(
+    ctx.device,
+    runtime.textures?.baseColorTexture ?? "/assets/builtin/textures/white.png",
+    `${sceneMesh.name} Base Color Texture`,
+  );
+  runtime.normalTexture = await loadTexture2D(
+    ctx.device,
+    runtime.textures?.normalTexture ?? "/assets/builtin/textures/flat-normal.png",
+    `${sceneMesh.name} Normal Texture`,
+  );
+  return runtime;
+}
+
+async function loadTexture2D(device: GPUDevice, url: string, label: string) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to load material texture: ${url}`);
+  }
+  const bitmap = await createImageBitmap(await response.blob());
+  const texture = device.createTexture({
+    label,
+    size: [bitmap.width, bitmap.height, 1],
+    format: "rgba8unorm",
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+  });
+  device.queue.copyExternalImageToTexture({ source: bitmap }, { texture }, [bitmap.width, bitmap.height]);
+  bitmap.close();
+  return texture;
+}
+
 function resolveResourceFormat(
   resource: Extract<GraphResourceSpec, { kind: "texture2d" | "depthTexture" }>,
   screenFormat: GPUTextureFormat,
@@ -528,7 +639,7 @@ function toLayoutEntry(binding: GraphBinding): GPUBindGroupLayoutEntry {
     return {
       binding: binding.binding,
       visibility: GPUShaderStage.FRAGMENT,
-      sampler: { type: binding.type ?? "filtering" },
+      sampler: { type: binding.source === "material.sampler" ? "filtering" : (binding.type ?? "filtering") },
     };
   }
   return {
@@ -574,11 +685,17 @@ function createPassBindGroups(
         entries.push({ binding: binding.binding, resource: { buffer: pass.paramsBuffer } });
       }
       if (binding.kind === "texture") {
+        if (binding.source.startsWith("material.")) {
+          continue;
+        }
         const texture = textures.get(binding.source);
         if (!texture) throw new Error(`Missing texture binding source: ${binding.source}`);
         entries.push({ binding: binding.binding, resource: texture.texture.createView() });
       }
       if (binding.kind === "sampler") {
+        if (binding.source.startsWith("material.")) {
+          continue;
+        }
         const sampler = samplers.get(binding.source);
         if (!sampler) throw new Error(`Missing sampler binding source: ${binding.source}`);
         entries.push({ binding: binding.binding, resource: sampler.sampler });
@@ -605,7 +722,9 @@ function setPassBindGroups(renderPass: GPURenderPassEncoder, pass: CompiledPass)
 
 function getObjectGroup(bindings: GraphBinding[]) {
   const binding = bindings.find(
-    (entry) => entry.kind === "uniform" && (entry.source === "object" || entry.source === "material"),
+    (entry) =>
+      (entry.kind === "uniform" && (entry.source === "object" || entry.source === "material")) ||
+      entry.source.startsWith("material."),
   );
   return binding?.group ?? -1;
 }
@@ -713,7 +832,11 @@ function validateGraph(spec: GraphLabSpec) {
       }
     }
     for (const binding of pass.bindings ?? []) {
-      if ((binding.kind === "texture" || binding.kind === "sampler") && !resourceIds.has(binding.source)) {
+      if (
+        (binding.kind === "texture" || binding.kind === "sampler") &&
+        !binding.source.startsWith("material.") &&
+        !resourceIds.has(binding.source)
+      ) {
         throw new Error(`Graph pass ${pass.name} binding references missing resource: ${binding.source}`);
       }
     }

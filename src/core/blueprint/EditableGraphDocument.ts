@@ -1,9 +1,9 @@
 import { BuiltinAssets } from "../assets/BuiltinAssets";
-import type { GraphLabSpec, GraphPassSpec, GraphResourceSpec } from "../graph";
+import type { GraphLabSpec, GraphMaterialInstance, GraphPassSpec, GraphResourceSpec } from "../graph";
 import type { PipelineParamSpecs } from "../pipeline/PipelineParams";
 
 export type EditableGraphLabDocument = {
-  schema: "games-platform.editable-graph-lab";
+  schema: "games-platform.editable-graph-lab" | "games-platform.editable-blueprint";
   version: 1;
   id: string;
   name: string;
@@ -19,10 +19,33 @@ export type EditableGraphLabDocument = {
   shaders: Record<string, { path: string; code: string }>;
 };
 
+export type ExperimentMaterialAssignment = {
+  meshId: string;
+  materialId: string;
+};
+
+export type EditableExperimentDocument = {
+  schema: "games-platform.experiment-lab";
+  version: 1;
+  id: string;
+  name: string;
+  description?: string;
+  scene: string;
+  blueprintId: string;
+  materialInstances: GraphMaterialInstance[];
+  assignments: ExperimentMaterialAssignment[];
+};
+
 export type UserLabListEntry = {
   id: string;
   path: string;
   updatedAt: number;
+};
+
+export type UserLabCollection = {
+  labs?: UserLabListEntry[];
+  blueprints?: UserLabListEntry[];
+  experiments?: UserLabListEntry[];
 };
 
 export function createDefaultGraphDocument(id = "my-graph-lab"): EditableGraphLabDocument {
@@ -67,6 +90,8 @@ export function createDefaultGraphDocument(id = "my-graph-lab"): EditableGraphLa
           { kind: "uniform", name: "params", group: 0, binding: 1, source: "params" },
           { kind: "uniform", name: "object", group: 1, binding: 0, source: "object" },
           { kind: "uniform", name: "material", group: 1, binding: 1, source: "material" },
+          { kind: "texture", name: "baseColorTexture", group: 1, binding: 2, source: "material.baseColorTexture" },
+          { kind: "sampler", name: "materialSampler", group: 1, binding: 3, source: "material.sampler" },
         ],
         cullMode: "back",
         depthWrite: true,
@@ -93,19 +118,60 @@ export function createDefaultGraphDocument(id = "my-graph-lab"): EditableGraphLa
   };
 }
 
-export function documentToGraphLabSpec(document: EditableGraphLabDocument, shaderVersion = Date.now()): GraphLabSpec {
+export function createDefaultExperimentDocument(
+  id: string,
+  blueprintId: string,
+  scene: string,
+  meshIds: string[],
+): EditableExperimentDocument {
+  const defaultMaterialId = "default-material";
   return {
-    id: document.id,
-    name: document.name,
-    description: document.description,
-    scene: document.scene,
+    schema: "games-platform.experiment-lab",
+    version: 1,
+    id,
+    name: toTitle(id),
+    description: "User composed Scene + Blueprint experiment.",
+    scene,
+    blueprintId,
+    materialInstances: [
+      {
+        id: defaultMaterialId,
+        name: "Default Material",
+        baseColor: [0.72, 0.74, 0.72, 1],
+        metallic: 0,
+        roughness: 0.55,
+        textures: {
+          baseColorTexture: "/assets/builtin/textures/white.png",
+          normalTexture: "/assets/builtin/textures/flat-normal.png",
+        },
+      },
+    ],
+    assignments: meshIds.map((meshId) => ({ meshId, materialId: defaultMaterialId })),
+  };
+}
+
+export function documentToGraphLabSpec(
+  document: EditableGraphLabDocument,
+  shaderVersion = Date.now(),
+  experiment?: EditableExperimentDocument,
+  shaderBase = `/__user_labs/blueprints/${document.id}`,
+): GraphLabSpec {
+  return {
+    id: experiment?.id ?? document.id,
+    name: experiment?.name ?? document.name,
+    description: experiment?.description ?? document.description,
+    scene: experiment?.scene ?? document.scene,
     params: document.params,
     resources: document.resources,
     passes: document.passes.map((pass) => ({
       ...pass,
-      shader: resolveShaderUrl(document.id, pass.shader, document.shaders, shaderVersion),
+      shader: resolveShaderUrl(shaderBase, pass.shader, document.shaders, shaderVersion),
     })),
     output: document.output,
+    materialInstances: experiment?.materialInstances,
+    materialAssignments: experiment
+      ? Object.fromEntries(experiment.assignments.map((entry) => [entry.meshId, entry.materialId]))
+      : undefined,
   };
 }
 
@@ -115,10 +181,10 @@ export function validateEditableGraphDocument(document: EditableGraphLabDocument
   const passNames = new Set<string>();
 
   if (!document.id.match(/^[a-zA-Z0-9_-]+$/)) {
-    errors.push("Lab id only supports letters, numbers, underscore, and dash.");
+    errors.push("Blueprint id only supports letters, numbers, underscore, and dash.");
   }
   if (!document.name.trim()) {
-    errors.push("Lab name is required.");
+    errors.push("Blueprint name is required.");
   }
   if (!resourceIds.has(document.output)) {
     errors.push(`Output resource is missing: ${document.output}`);
@@ -149,7 +215,11 @@ export function validateEditableGraphDocument(document: EditableGraphLabDocument
         errors.push(`Pass ${pass.name} has duplicate binding ${key}.`);
       }
       seenBindings.add(key);
-      if ((binding.kind === "texture" || binding.kind === "sampler") && !resourceIds.has(binding.source)) {
+      if (
+        (binding.kind === "texture" || binding.kind === "sampler") &&
+        !binding.source.startsWith("material.") &&
+        !resourceIds.has(binding.source)
+      ) {
         errors.push(`Pass ${pass.name} binding references missing resource: ${binding.source}`);
       }
     }
@@ -157,17 +227,62 @@ export function validateEditableGraphDocument(document: EditableGraphLabDocument
   return errors;
 }
 
+export function validateEditableExperimentDocument(
+  experiment: EditableExperimentDocument,
+  blueprintIds: string[],
+  sceneMeshIds: string[],
+): string[] {
+  const errors: string[] = [];
+  const materialIds = new Set(experiment.materialInstances.map((material) => material.id));
+  const meshIds = new Set(sceneMeshIds);
+
+  if (!experiment.id.match(/^[a-zA-Z0-9_-]+$/)) {
+    errors.push("Experiment id only supports letters, numbers, underscore, and dash.");
+  }
+  if (!experiment.name.trim()) {
+    errors.push("Experiment name is required.");
+  }
+  if (!blueprintIds.includes(experiment.blueprintId)) {
+    errors.push(`Experiment references missing blueprint: ${experiment.blueprintId}`);
+  }
+  for (const material of experiment.materialInstances) {
+    if (!material.id.match(/^[a-zA-Z0-9_-]+$/)) {
+      errors.push(`Invalid material id: ${material.id}`);
+    }
+    if (!material.name.trim()) {
+      errors.push(`Material name is required: ${material.id}`);
+    }
+  }
+  for (const assignment of experiment.assignments) {
+    if (!meshIds.has(assignment.meshId)) {
+      errors.push(`Assignment references missing mesh: ${assignment.meshId}`);
+    }
+    if (!materialIds.has(assignment.materialId)) {
+      errors.push(`Assignment references missing material: ${assignment.materialId}`);
+    }
+  }
+  return errors;
+}
+
 function resolveShaderUrl(
-  labId: string,
+  shaderBase: string,
   shaderId: string,
   shaders: EditableGraphLabDocument["shaders"],
   shaderVersion: number,
 ) {
   const shader = shaders[shaderId];
   if (!shader) {
-    return `/__user_labs/${labId}/shaders/missing.wgsl?v=${shaderVersion}`;
+    return `${shaderBase}/shaders/missing.wgsl?v=${shaderVersion}`;
   }
-  return `/__user_labs/${labId}/shaders/${shader.path}?v=${shaderVersion}`;
+  return `${shaderBase}/shaders/${shader.path}?v=${shaderVersion}`;
+}
+
+function toTitle(id: string) {
+  return id
+    .split(/[-_]/)
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function defaultMeshShader() {
@@ -189,6 +304,7 @@ struct ObjectUniforms {
 struct MaterialUniforms {
   baseColor: vec4f,
   metallicRoughness: vec4f,
+  textureFlags: vec4f,
 };
 
 struct VertexInput {
@@ -200,20 +316,25 @@ struct VertexInput {
 struct VertexOutput {
   @builtin(position) position: vec4f,
   @location(0) normal: vec3f,
-  @location(1) color: vec4f,
+  @location(1) uv: vec2f,
+  @location(2) color: vec4f,
 };
 
 @group(0) @binding(0) var<uniform> frame: FrameUniforms;
 @group(0) @binding(1) var<uniform> params: ParamsUniforms;
 @group(1) @binding(0) var<uniform> object: ObjectUniforms;
 @group(1) @binding(1) var<uniform> material: MaterialUniforms;
+@group(1) @binding(2) var baseColorTexture: texture_2d<f32>;
+@group(1) @binding(3) var materialSampler: sampler;
 
 @vertex
 fn vertexMain(input: VertexInput) -> VertexOutput {
   var output: VertexOutput;
   output.position = object.modelViewProjection * vec4f(input.position, 1.0);
   output.normal = normalize((object.model * vec4f(input.normal, 0.0)).xyz);
-  output.color = material.baseColor;
+  output.uv = input.uv;
+  let texColor = textureSample(baseColorTexture, materialSampler, input.uv);
+  output.color = mix(material.baseColor, material.baseColor * texColor, material.textureFlags.x);
   return output;
 }
 

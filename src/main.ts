@@ -2,6 +2,7 @@ import "./styles.css";
 import { BuiltinAssets } from "./core/assets/BuiltinAssets";
 import { loadScenePreset } from "./core/assets/loadScene";
 import { BlueprintWorkspace } from "./core/blueprint/BlueprintWorkspace";
+import { LabComposer } from "./core/blueprint/LabComposer";
 import { UserLabStore } from "./core/blueprint/UserLabStore";
 import type { WebGPUState } from "./core/gpu/WebGPUState";
 import { LabRuntime } from "./core/lab/LabRuntime";
@@ -30,6 +31,7 @@ const debugRoot = queryRequiredElement<HTMLElement>("#debug-root");
 const workspace = queryRequiredElement<HTMLElement>(".workspace");
 const panelResizer = queryRequiredElement<HTMLElement>("#panel-resizer");
 const blueprintToggle = queryRequiredElement<HTMLButtonElement>("#blueprint-toggle");
+const composerToggle = queryRequiredElement<HTMLButtonElement>("#composer-toggle");
 const helpToggle = queryRequiredElement<HTMLButtonElement>("#help-toggle");
 const helpOverlay = queryRequiredElement<HTMLElement>("#help-overlay");
 const helpClose = queryRequiredElement<HTMLButtonElement>("#help-close");
@@ -255,6 +257,11 @@ async function start() {
     };
 
     const blueprintWorkspace = new BlueprintWorkspace({
+      store: userLabStore,
+      onBlueprintsChanged: refreshLabSelect,
+      onLog: (level, message) => logger.add(level, message),
+    });
+    const labComposer = new LabComposer({
       registry,
       store: userLabStore,
       onLabsChanged: refreshLabSelect,
@@ -267,6 +274,9 @@ async function start() {
 
     blueprintToggle.addEventListener("click", () => {
       void blueprintWorkspace.open();
+    });
+    composerToggle.addEventListener("click", () => {
+      void labComposer.open();
     });
 
     labSelect.addEventListener("change", () => {

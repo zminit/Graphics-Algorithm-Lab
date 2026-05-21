@@ -730,7 +730,8 @@ h1 {
   overflow-wrap: anywhere;
 }
 
-.blueprint-overlay {
+.blueprint-overlay,
+.composer-overlay {
   position: fixed;
   inset: 0;
   z-index: 30;
@@ -738,11 +739,13 @@ h1 {
   background: rgb(7 10 14 / 82%);
 }
 
-.blueprint-overlay[hidden] {
+.blueprint-overlay[hidden],
+.composer-overlay[hidden] {
   display: none;
 }
 
-.blueprint-window {
+.blueprint-window,
+.composer-window {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) minmax(210px, 32vh);
   width: 100%;
@@ -754,7 +757,12 @@ h1 {
   box-shadow: 0 24px 80px rgb(0 0 0 / 42%);
 }
 
-.blueprint-toolbar {
+.composer-window {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.blueprint-toolbar,
+.composer-toolbar {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -764,7 +772,8 @@ h1 {
   background: #121820;
 }
 
-.blueprint-toolbar strong {
+.blueprint-toolbar strong,
+.composer-toolbar strong {
   color: #f6f8fb;
   font-size: 14px;
   white-space: nowrap;
@@ -776,7 +785,12 @@ h1 {
 .blueprint-inspector-form button,
 .blueprint-inspector-form input,
 .blueprint-inspector-form select,
-.blueprint-codebar select {
+.blueprint-codebar select,
+.composer-toolbar button,
+.composer-toolbar select,
+.composer-panel button,
+.composer-panel input,
+.composer-panel select {
   height: 30px;
   min-width: 0;
   color: #dfe8ef;
@@ -788,14 +802,18 @@ h1 {
 
 .blueprint-toolbar button,
 .blueprint-library button,
-.blueprint-inspector-form button {
+.blueprint-inspector-form button,
+.composer-toolbar button,
+.composer-panel button {
   padding: 0 10px;
   cursor: pointer;
 }
 
 .blueprint-toolbar button:hover,
 .blueprint-library button:hover,
-.blueprint-inspector-form button:hover {
+.blueprint-inspector-form button:hover,
+.composer-toolbar button:hover,
+.composer-panel button:hover {
   border-color: #4d6a82;
   background: #202c38;
 }
@@ -1002,6 +1020,91 @@ h1 {
   color: #ffb8b8;
 }
 
+.composer-body {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 360px;
+  min-height: 0;
+}
+
+.composer-panel {
+  min-width: 0;
+  overflow: auto;
+  padding: 14px;
+  border-right: 1px solid #26323e;
+  background: #0d1319;
+}
+
+.composer-panel:last-child {
+  border-right: 0;
+}
+
+.composer-panel-header,
+.composer-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.composer-card-title strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #f6f8fb;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-panel label,
+.composer-card label,
+.composer-object-row {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 10px;
+  color: #9fb0be;
+  font-size: 12px;
+}
+
+.composer-card {
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid #26323e;
+  border-radius: 6px;
+  background: #10161d;
+}
+
+.composer-card input[type="color"] {
+  width: 100%;
+}
+
+.composer-object-row {
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 160px);
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid #1c2630;
+}
+
+.composer-object-row span {
+  min-width: 0;
+  overflow: hidden;
+  color: #d7e0e8;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-status {
+  margin: 10px 0 0;
+  overflow-wrap: anywhere;
+  color: #9fb0be;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.composer-status[data-tone="error"] {
+  color: #ffb8b8;
+}
+
 :root[data-theme="light"] .viewport-shell,
 :root[data-theme="light"] body {
   background: var(--app-bg);
@@ -1011,7 +1114,8 @@ h1 {
 :root[data-theme="light"] .log-toggle,
 :root[data-theme="light"] .help-header,
 :root[data-theme="light"] .blueprint-toolbar,
-:root[data-theme="light"] .blueprint-codebar {
+:root[data-theme="light"] .blueprint-codebar,
+:root[data-theme="light"] .composer-toolbar {
   border-color: var(--border);
   background: var(--topbar-bg);
 }
@@ -1022,7 +1126,9 @@ h1 {
 :root[data-theme="light"] .help-section h3,
 :root[data-theme="light"] .graph-inspector h3,
 :root[data-theme="light"] .blueprint-toolbar strong,
-:root[data-theme="light"] .blueprint-inspector-form h3 {
+:root[data-theme="light"] .blueprint-inspector-form h3,
+:root[data-theme="light"] .composer-toolbar strong,
+:root[data-theme="light"] .composer-card-title strong {
   color: var(--text-heading);
 }
 
@@ -1032,14 +1138,17 @@ h1 {
 :root[data-theme="light"] .graph-inspector dt,
 :root[data-theme="light"] .blueprint-codebar,
 :root[data-theme="light"] .blueprint-inspector-form label,
-:root[data-theme="light"] .log-toolbar {
+:root[data-theme="light"] .log-toolbar,
+:root[data-theme="light"] .composer-panel label,
+:root[data-theme="light"] .composer-card label {
   color: var(--text-muted);
 }
 
 :root[data-theme="light"] .side-panel,
 :root[data-theme="light"] .log-panel,
 :root[data-theme="light"] .help-dialog,
-:root[data-theme="light"] .blueprint-window {
+:root[data-theme="light"] .blueprint-window,
+:root[data-theme="light"] .composer-window {
   color: var(--text-primary);
   border-color: var(--border);
   background: var(--panel-bg);
@@ -1049,7 +1158,8 @@ h1 {
 :root[data-theme="light"] .help-section p,
 :root[data-theme="light"] .graph-inspector p,
 :root[data-theme="light"] .graph-inspector dd,
-:root[data-theme="light"] .log-entry pre {
+:root[data-theme="light"] .log-entry pre,
+:root[data-theme="light"] .composer-object-row span {
   color: var(--text-secondary);
 }
 
@@ -1067,7 +1177,12 @@ h1 {
 :root[data-theme="light"] .blueprint-inspector-form button,
 :root[data-theme="light"] .blueprint-inspector-form input,
 :root[data-theme="light"] .blueprint-inspector-form select,
-:root[data-theme="light"] .blueprint-codebar select {
+:root[data-theme="light"] .blueprint-codebar select,
+:root[data-theme="light"] .composer-toolbar button,
+:root[data-theme="light"] .composer-toolbar select,
+:root[data-theme="light"] .composer-panel button,
+:root[data-theme="light"] .composer-panel input,
+:root[data-theme="light"] .composer-panel select {
   color: var(--text-primary);
   border-color: var(--border-strong);
   background: var(--control-bg);
@@ -1079,7 +1194,9 @@ h1 {
 :root[data-theme="light"] .log-toolbar button:hover,
 :root[data-theme="light"] .blueprint-toolbar button:hover,
 :root[data-theme="light"] .blueprint-library button:hover,
-:root[data-theme="light"] .blueprint-inspector-form button:hover {
+:root[data-theme="light"] .blueprint-inspector-form button:hover,
+:root[data-theme="light"] .composer-toolbar button:hover,
+:root[data-theme="light"] .composer-panel button:hover {
   border-color: var(--accent);
   background: var(--control-hover-bg);
 }
@@ -1105,6 +1222,7 @@ h1 {
 :root[data-theme="light"] .panel-resizer,
 :root[data-theme="light"] .blueprint-library,
 :root[data-theme="light"] .blueprint-inspector,
+:root[data-theme="light"] .composer-panel,
 :root[data-theme="light"] .help-nav,
 :root[data-theme="light"] .help-path-grid,
 :root[data-theme="light"] .graph-inspector {
@@ -1116,7 +1234,9 @@ h1 {
 :root[data-theme="light"] .gui-row,
 :root[data-theme="light"] .help-section,
 :root[data-theme="light"] .log-toolbar,
-:root[data-theme="light"] .log-entry {
+:root[data-theme="light"] .log-entry,
+:root[data-theme="light"] .composer-card,
+:root[data-theme="light"] .composer-object-row {
   border-color: var(--border);
 }
 
@@ -1160,7 +1280,8 @@ h1 {
 }
 
 :root[data-theme="light"] .help-overlay,
-:root[data-theme="light"] .blueprint-overlay {
+:root[data-theme="light"] .blueprint-overlay,
+:root[data-theme="light"] .composer-overlay {
   background: rgb(222 231 240 / 82%);
 }
 
