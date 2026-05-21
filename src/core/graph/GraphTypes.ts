@@ -1,4 +1,4 @@
-import type { PipelineParamSpecs } from "../pipeline/PipelineParams";
+import type { GraphParamSpecs } from "./GraphParamTypes";
 
 export type GraphTextureSize = "canvas" | [number, number];
 export type GraphResourceUsage = "render" | "sample" | "copySrc" | "copyDst";
@@ -87,7 +87,7 @@ export type GraphLabSpec = {
   name: string;
   description?: string;
   scene: string;
-  params?: PipelineParamSpecs;
+  params?: GraphParamSpecs;
   resources: Record<string, GraphResourceSpec>;
   passes: GraphPassSpec[];
   output: string;

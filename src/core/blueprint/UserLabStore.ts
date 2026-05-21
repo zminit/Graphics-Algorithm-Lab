@@ -20,14 +20,12 @@ export class UserLabStore {
   private saveVersion = Date.now();
 
   async loadAll(): Promise<UserLabStoreResult> {
-    const [blueprints, legacyLabs, experiments] = await Promise.all([
+    const [blueprints, experiments] = await Promise.all([
       this.listBlueprints(),
-      this.listLegacyLabs(),
       this.listExperiments(),
     ]);
     const documents: EditableGraphLabDocument[] = [];
     const hydratedBlueprints = new Map<string, EditableGraphLabDocument>();
-    const shaderBases = new Map<string, string>();
     const loadedExperiments: EditableExperimentDocument[] = [];
     const labs: Lab[] = [];
 
@@ -35,17 +33,6 @@ export class UserLabStore {
       const document = await this.loadBlueprint(entry.id);
       documents.push(document);
       hydratedBlueprints.set(document.id, document);
-      shaderBases.set(document.id, `/__user_labs/blueprints/${document.id}`);
-    }
-
-    for (const entry of legacyLabs) {
-      if (hydratedBlueprints.has(entry.id)) {
-        continue;
-      }
-      const document = await this.loadBlueprint(entry.id, true);
-      documents.push(document);
-      hydratedBlueprints.set(document.id, document);
-      shaderBases.set(document.id, `/__user_labs/${document.id}`);
     }
 
     for (const entry of experiments) {
@@ -54,22 +41,8 @@ export class UserLabStore {
       const blueprint = hydratedBlueprints.get(experiment.blueprintId);
       if (blueprint && !validateEditableGraphDocument(blueprint).length) {
         labs.push(
-          defineGraphLab(
-            documentToGraphLabSpec(
-              blueprint,
-              entry.updatedAt || this.saveVersion,
-              experiment,
-              shaderBases.get(blueprint.id) ?? `/__user_labs/blueprints/${blueprint.id}`,
-            ),
-          ),
+          defineGraphLab(documentToGraphLabSpec(blueprint, entry.updatedAt || this.saveVersion, experiment)),
         );
-      }
-    }
-
-    for (const entry of legacyLabs) {
-      const document = hydratedBlueprints.get(entry.id);
-      if (document && !validateEditableGraphDocument(document).length) {
-        labs.push(defineGraphLab(documentToGraphLabSpec(document, entry.updatedAt || this.saveVersion, undefined, `/__user_labs/${document.id}`)));
       }
     }
 
@@ -85,11 +58,6 @@ export class UserLabStore {
     return payload.blueprints ?? [];
   }
 
-  async listLegacyLabs(): Promise<UserLabListEntry[]> {
-    const payload = await this.listCollection();
-    return payload.labs ?? [];
-  }
-
   async listExperiments(): Promise<UserLabListEntry[]> {
     const payload = await this.listCollection();
     return payload.experiments ?? [];
@@ -99,8 +67,8 @@ export class UserLabStore {
     return this.loadBlueprint(id);
   }
 
-  async loadBlueprint(id: string, legacy = false): Promise<EditableGraphLabDocument> {
-    const response = await fetch(legacy ? `/__user_labs/${encodeURIComponent(id)}` : `/__user_labs/blueprints/${encodeURIComponent(id)}`);
+  async loadBlueprint(id: string): Promise<EditableGraphLabDocument> {
+    const response = await fetch(`/__user_labs/blueprints/${encodeURIComponent(id)}`);
     if (!response.ok) {
       throw new Error(`Failed to load blueprint: ${id}`);
     }
@@ -172,13 +140,13 @@ export class UserLabStore {
     }
   }
 
-  async hydrateShaders(document: EditableGraphLabDocument, legacy = false): Promise<EditableGraphLabDocument> {
+  async hydrateShaders(document: EditableGraphLabDocument): Promise<EditableGraphLabDocument> {
     const next = structuredClone(document);
     for (const shader of Object.values(next.shaders)) {
       if (shader.code) {
         continue;
       }
-      const base = legacy ? `/__user_labs/${encodeURIComponent(next.id)}` : `/__user_labs/blueprints/${encodeURIComponent(next.id)}`;
+      const base = `/__user_labs/blueprints/${encodeURIComponent(next.id)}`;
       const response = await fetch(`${base}/shaders/${encodeURIComponent(shader.path)}?v=${Date.now()}`);
       shader.code = response.ok ? await response.text() : "";
     }
@@ -186,8 +154,7 @@ export class UserLabStore {
   }
 
   toLab(document: EditableGraphLabDocument, experiment?: EditableExperimentDocument): Lab {
-    const shaderBase = document.schema === "games-platform.editable-graph-lab" ? `/__user_labs/${document.id}` : `/__user_labs/blueprints/${document.id}`;
-    return defineGraphLab(documentToGraphLabSpec(document, this.saveVersion, experiment, shaderBase));
+    return defineGraphLab(documentToGraphLabSpec(document, this.saveVersion, experiment));
   }
 
   private async listCollection(): Promise<UserLabCollection> {

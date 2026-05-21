@@ -1,15 +1,15 @@
 import { BuiltinAssets } from "../assets/BuiltinAssets";
 import type { GraphLabSpec, GraphMaterialInstance, GraphPassSpec, GraphResourceSpec } from "../graph";
-import type { PipelineParamSpecs } from "../pipeline/PipelineParams";
+import type { GraphParamSpecs } from "../graph/GraphParamTypes";
 
 export type EditableGraphLabDocument = {
-  schema: "games-platform.editable-graph-lab" | "games-platform.editable-blueprint";
+  schema: "games-platform.editable-blueprint";
   version: 1;
   id: string;
   name: string;
   description?: string;
   scene: string;
-  params: PipelineParamSpecs;
+  params: GraphParamSpecs;
   resources: Record<string, GraphResourceSpec>;
   passes: GraphPassSpec[];
   output: string;
@@ -43,18 +43,17 @@ export type UserLabListEntry = {
 };
 
 export type UserLabCollection = {
-  labs?: UserLabListEntry[];
   blueprints?: UserLabListEntry[];
   experiments?: UserLabListEntry[];
 };
 
 export function createDefaultGraphDocument(id = "my-graph-lab"): EditableGraphLabDocument {
   return {
-    schema: "games-platform.editable-graph-lab",
+    schema: "games-platform.editable-blueprint",
     version: 1,
     id,
-    name: "My Graph Lab",
-    description: "User editable Graph Lab.",
+    name: "My Blueprint",
+    description: "User editable render blueprint.",
     scene: BuiltinAssets.scenes.shadowTest,
     params: {
       ambient: { type: "float", value: 0.2, min: 0, max: 1, step: 0.01 },

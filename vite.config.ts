@@ -39,7 +39,7 @@ function userLabsPlugin(): Plugin {
             return;
           }
 
-          await handleLegacyLabRequest(method, parts, request, response, userLabsRoot);
+          sendJson(response, 404, { error: "Unknown user lab endpoint." });
         } catch (error) {
           const status = isNotFound(error) ? 404 : 500;
           sendJson(response, status, { error: error instanceof Error ? error.message : String(error) });
@@ -123,64 +123,12 @@ async function handleExperimentRequest(
   sendJson(response, 404, { error: "Unknown experiment endpoint." });
 }
 
-async function handleLegacyLabRequest(
-  method: string,
-  parts: string[],
-  request: import("node:http").IncomingMessage,
-  response: import("node:http").ServerResponse,
-  root: string,
-) {
-  const labId = parts[1];
-  if (!labId || !isSafeId(labId)) {
-    sendJson(response, 400, { error: "Invalid lab id." });
-    return;
-  }
-
-  if (method === "GET" && parts.length === 2) {
-    sendJson(response, 200, JSON.parse(await readFile(legacyLabDocumentPath(root, labId), "utf8")));
-    return;
-  }
-
-  if (method === "PUT" && parts.length === 2) {
-    const body = await readBody(request);
-    await mkdir(path.dirname(legacyLabDocumentPath(root, labId)), { recursive: true });
-    await writeFile(legacyLabDocumentPath(root, labId), body, "utf8");
-    sendJson(response, 200, { ok: true });
-    return;
-  }
-
-  const shaderFile = parts[3];
-  if (parts.length === 4 && parts[2] === "shaders" && shaderFile && isSafeShader(shaderFile)) {
-    if (method === "GET") {
-      sendText(response, 200, await readFile(legacyShaderPath(root, labId, shaderFile), "utf8"));
-      return;
-    }
-    if (method === "PUT") {
-      const body = await readBody(request);
-      await mkdir(path.dirname(legacyShaderPath(root, labId, shaderFile)), { recursive: true });
-      await writeFile(legacyShaderPath(root, labId, shaderFile), body, "utf8");
-      sendJson(response, 200, { ok: true });
-      return;
-    }
-  }
-
-  sendJson(response, 404, { error: "Unknown user lab endpoint." });
-}
-
 function isSafeId(value: string) {
   return idPattern.test(value);
 }
 
 function isSafeShader(value: string) {
   return shaderPattern.test(value);
-}
-
-function legacyLabDocumentPath(root: string, labId: string) {
-  return path.join(root, labId, "lab.json");
-}
-
-function legacyShaderPath(root: string, labId: string, shaderFile: string) {
-  return path.join(root, labId, "shaders", shaderFile);
 }
 
 function blueprintDocumentPath(root: string, blueprintId: string) {
@@ -196,31 +144,11 @@ function experimentDocumentPath(root: string, experimentId: string) {
 }
 
 async function listAll(root: string) {
-  const [labs, blueprints, experiments] = await Promise.all([
-    listLegacyLabs(root),
+  const [blueprints, experiments] = await Promise.all([
     listDocuments(path.join(root, "blueprints"), "blueprint.json", "user-labs/blueprints"),
     listDocuments(path.join(root, "experiments"), "lab.json", "user-labs/experiments"),
   ]);
-  return { labs, blueprints, experiments };
-}
-
-async function listLegacyLabs(root: string) {
-  await mkdir(root, { recursive: true });
-  const entries = await readdir(root, { withFileTypes: true });
-  const labs = [];
-  for (const entry of entries) {
-    if (!entry.isDirectory() || !isSafeId(entry.name) || entry.name === "blueprints" || entry.name === "experiments") {
-      continue;
-    }
-    const file = legacyLabDocumentPath(root, entry.name);
-    try {
-      const info = await stat(file);
-      labs.push({ id: entry.name, path: `user-labs/${entry.name}/lab.json`, updatedAt: info.mtimeMs });
-    } catch {
-      // Ignore incomplete drafts without a lab.json.
-    }
-  }
-  return labs;
+  return { blueprints, experiments };
 }
 
 async function listDocuments(root: string, documentName: string, publicRoot: string) {
