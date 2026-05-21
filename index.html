@@ -71,6 +71,7 @@
                 <a href="#help-assets">资源文件</a>
                 <a href="#help-code">算法代码</a>
                 <a href="#help-pipeline">Pipeline Lab</a>
+                <a href="#help-graph">Render Graph</a>
                 <a href="#help-bindings">Binding 接口</a>
                 <a href="#help-wgsl">WGSL 约定</a>
                 <a href="#help-debug">调试与日志</a>
@@ -116,6 +117,8 @@
                     <span>Lab 声明</span><code>src/labs/pipeline-basic-mesh/PipelineBasicMeshLab.ts</code>
                     <span>WGSL</span><code>public/shaders/pipeline/basic-mesh.wgsl</code>
                     <span>底层接口</span><code>src/core/pipeline/</code>
+                    <span>Graph 示例</span><code>src/labs/graph-basic-mesh/</code>
+                    <span>Postprocess 示例</span><code>src/labs/graph-postprocess/</code>
                   </div>
                   <p>
                     如果算法必须完全控制 WebGPU，例如自定义多 render target、compute pass 或特殊资源生命周期，
@@ -142,6 +145,30 @@
       depth: "auto",
     }),
   ],
+});</code></pre>
+                </section>
+
+                <section class="help-section" id="help-graph">
+                  <h3>Render Graph 怎么用</h3>
+                  <p>
+                    新的 Graph Lab 用 TypeScript 声明资源、pass 和输出。右侧 Render Graph 会把资源节点、pass 节点和屏幕输出连起来，
+                    用来观察 GPU 数据流和 binding 对应关系。
+                  </p>
+                  <pre><code>export const MyGraphLab = defineGraphLab({
+  id: "my-graph-lab",
+  name: "My Graph Lab",
+  scene: BuiltinAssets.scenes.shadowTest,
+  resources: {
+    sceneColor: texture2D({ format: "screen", debug: true }),
+    sceneDepth: depthTexture({ format: "depth24plus" }),
+    finalColor: texture2D({ format: "screen", debug: true }),
+    linearSampler: sampler({ type: "filtering" }),
+  },
+  passes: [
+    meshPass({ name: "Scene", shader: "/shaders/my/scene.wgsl", color: "sceneColor", depth: "sceneDepth" }),
+    fullscreenPass({ name: "Post", shader: "/shaders/my/post.wgsl", color: "finalColor", reads: ["sceneColor"] }),
+  ],
+  output: "finalColor",
 });</code></pre>
                 </section>
 

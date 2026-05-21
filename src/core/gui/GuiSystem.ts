@@ -48,12 +48,14 @@ type ParamRecord = {
 
 export class GuiSystem {
   private readonly params = new Map<string, ParamRecord>();
+  private readonly mounts: HTMLElement[] = [];
   private presetKey = "games-platform.gui.default";
 
   constructor(private readonly root: HTMLElement) {}
 
   clear() {
     this.params.clear();
+    this.mounts.length = 0;
     this.root.replaceChildren();
   }
 
@@ -70,6 +72,11 @@ export class GuiSystem {
       param,
       initialValue: cloneValue(param.get()),
     });
+    this.render();
+  }
+
+  mount(element: HTMLElement) {
+    this.mounts.push(element);
     this.render();
   }
 
@@ -137,6 +144,10 @@ export class GuiSystem {
 
     for (const [id, { param }] of this.params) {
       fragment.append(this.createControl(id, param));
+    }
+
+    for (const mount of this.mounts) {
+      fragment.append(mount);
     }
 
     this.root.replaceChildren(fragment);
