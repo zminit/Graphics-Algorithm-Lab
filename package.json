@@ -11,6 +11,7 @@
   },
   "devDependencies": {
     "@webgpu/types": "^0.1.64",
+    "monaco-editor": "^0.55.1",
     "typescript": "^5.9.3",
     "vite": "^7.2.4"
   }

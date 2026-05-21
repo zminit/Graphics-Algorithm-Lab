@@ -20,6 +20,14 @@
             </label>
             <button
               class="help-button"
+              id="blueprint-toggle"
+              type="button"
+              aria-label="Open blueprint workspace"
+            >
+              Blueprint
+            </button>
+            <button
+              class="help-button"
               id="help-toggle"
               type="button"
               aria-expanded="false"
@@ -153,6 +161,10 @@
                   <p>
                     新的 Graph Lab 用 TypeScript 声明资源、pass 和输出。右侧 Render Graph 会把资源节点、pass 节点和屏幕输出连起来，
                     用来观察 GPU 数据流和 binding 对应关系。
+                  </p>
+                  <p>
+                    Blueprint workspace is dev-only. User Graph Labs and WGSL files are saved under <code>user-labs/</code>,
+                    which is ignored by git by default.
                   </p>
                   <pre><code>export const MyGraphLab = defineGraphLab({
   id: "my-graph-lab",

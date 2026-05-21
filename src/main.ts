@@ -1,6 +1,8 @@
 import "./styles.css";
 import { BuiltinAssets } from "./core/assets/BuiltinAssets";
 import { loadScenePreset } from "./core/assets/loadScene";
+import { BlueprintWorkspace } from "./core/blueprint/BlueprintWorkspace";
+import { UserLabStore } from "./core/blueprint/UserLabStore";
 import type { WebGPUState } from "./core/gpu/WebGPUState";
 import { LabRuntime } from "./core/lab/LabRuntime";
 import type { Lab } from "./core/lab/Lab";
@@ -26,6 +28,7 @@ const guiRoot = queryRequiredElement<HTMLElement>("#gui-root");
 const debugRoot = queryRequiredElement<HTMLElement>("#debug-root");
 const workspace = queryRequiredElement<HTMLElement>(".workspace");
 const panelResizer = queryRequiredElement<HTMLElement>("#panel-resizer");
+const blueprintToggle = queryRequiredElement<HTMLButtonElement>("#blueprint-toggle");
 const helpToggle = queryRequiredElement<HTMLButtonElement>("#help-toggle");
 const helpOverlay = queryRequiredElement<HTMLElement>("#help-overlay");
 const helpClose = queryRequiredElement<HTMLButtonElement>("#help-close");
@@ -193,6 +196,7 @@ async function start() {
     const state = await initWebGPU(canvas);
     const scenePreset = await loadScenePreset(BuiltinAssets.scenes.shadowTest);
     const registry = createLabRegistry();
+    const userLabStore = new UserLabStore();
     const runtime = new LabRuntime({
       ...state,
       canvas,
@@ -207,21 +211,44 @@ async function start() {
     });
     const adapterInfo = state.adapter.info;
     const gpuName = adapterInfo?.description || "WebGPU Ready";
-    const labs = registry.list();
-
-    for (const lab of labs) {
-      const option = document.createElement("option");
-      option.value = lab.id;
-      option.textContent = lab.name;
-      labSelect.append(option);
-    }
-
     const switchLab = async (labId: string) => {
       const lab = registry.get(labId);
       setActiveLabDetails(lab);
       await runtime.setLab(lab);
       setStatus(`${gpuName} · ${scenePreset.name} · ${lab.name}`, "ready");
     };
+
+    const refreshLabSelect = async (preferredLabId?: string) => {
+      const userLabs = await userLabStore.loadAll();
+      for (const lab of userLabs.labs) {
+        registry.replace(lab);
+      }
+      labSelect.replaceChildren();
+      for (const lab of registry.list()) {
+        const option = document.createElement("option");
+        option.value = lab.id;
+        option.textContent = lab.name;
+        labSelect.append(option);
+      }
+      if (preferredLabId && registry.list().some((lab) => lab.id === preferredLabId)) {
+        labSelect.value = preferredLabId;
+      }
+    };
+
+    const blueprintWorkspace = new BlueprintWorkspace({
+      registry,
+      store: userLabStore,
+      onLabsChanged: refreshLabSelect,
+      onRunLab: async (labId) => {
+        labSelect.value = labId;
+        await switchLab(labId);
+      },
+      onLog: (level, message) => logger.add(level, message),
+    });
+
+    blueprintToggle.addEventListener("click", () => {
+      void blueprintWorkspace.open();
+    });
 
     labSelect.addEventListener("change", () => {
       void switchLab(labSelect.value).catch((error: unknown) => {
@@ -236,6 +263,7 @@ async function start() {
     });
     setupPanelResize(() => runtime.resize());
 
+    await refreshLabSelect();
     const defaultLab = registry.get("basic-mesh");
     labSelect.value = defaultLab.id;
     labSelect.disabled = false;

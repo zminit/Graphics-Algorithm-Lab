@@ -11,6 +11,14 @@ export class LabRegistry {
     this.labs.set(lab.id, lab);
   }
 
+  replace(lab: Lab) {
+    this.labs.set(lab.id, lab);
+  }
+
+  unregister(id: string) {
+    this.labs.delete(id);
+  }
+
   get(id: string): Lab {
     const lab = this.labs.get(id);
 
