@@ -82,6 +82,11 @@ export class BlueprintWorkspace {
     this.labSelect = this.query(".blueprint-lab-select");
     this.shaderSelect = this.query(".blueprint-shader-select");
     this.editor = new WgslEditor(this.query(".blueprint-editor"), () => this.syncShaderFromEditor());
+    this.editor.setTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark");
+    window.addEventListener("lab-theme-change", (event) => {
+      const theme = (event as CustomEvent<{ theme: "dark" | "light" }>).detail.theme;
+      this.editor.setTheme(theme);
+    });
     this.bindEvents();
     this.render();
   }

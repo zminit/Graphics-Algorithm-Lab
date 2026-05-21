@@ -13,6 +13,7 @@ type CompletionSnippet = {
 export class WgslEditor {
   private monaco?: typeof Monaco;
   private editor?: Monaco.editor.IStandaloneCodeEditor;
+  private theme: "dark" | "light" = "dark";
 
   constructor(
     private readonly root: HTMLElement,
@@ -30,7 +31,7 @@ export class WgslEditor {
       this.editor = this.monaco.editor.create(this.root, {
         value,
         language: "wgsl",
-        theme: "vs-dark",
+        theme: this.monacoTheme(),
         automaticLayout: true,
         minimap: { enabled: false },
         fontSize: 12,
@@ -51,6 +52,11 @@ export class WgslEditor {
     return this.editor?.getValue() ?? "";
   }
 
+  setTheme(theme: "dark" | "light") {
+    this.theme = theme;
+    this.monaco?.editor.setTheme(this.monacoTheme());
+  }
+
   dispose() {
     this.editor?.dispose();
     this.editor = undefined;
@@ -62,6 +68,10 @@ export class WgslEditor {
     if (!this.editor) {
       this.setValue(value);
     }
+  }
+
+  private monacoTheme() {
+    return this.theme === "light" ? "vs" : "vs-dark";
   }
 }
 

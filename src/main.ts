@@ -22,6 +22,7 @@ function queryRequiredElement<T extends Element>(selector: string): T {
 const canvas = queryRequiredElement<HTMLCanvasElement>("#gfx-canvas");
 const statusElement = queryRequiredElement<HTMLElement>("#gpu-status");
 const labSelect = queryRequiredElement<HTMLSelectElement>("#lab-select");
+const themeSelect = queryRequiredElement<HTMLSelectElement>("#theme-select");
 const labTitle = queryRequiredElement<HTMLElement>("#lab-title");
 const labDescription = queryRequiredElement<HTMLElement>("#lab-description");
 const guiRoot = queryRequiredElement<HTMLElement>("#gui-root");
@@ -41,11 +42,29 @@ const logBody = queryRequiredElement<HTMLElement>("#log-body");
 const logClear = queryRequiredElement<HTMLButtonElement>("#log-clear");
 
 const logger = new RuntimeLogger(logPanel, logToggle, logCount, logSummary, logList, logBody, logClear);
+const themeStorageKey = "games-platform.theme";
 
 function setStatus(message: string, tone: "ready" | "error" | "loading" = "loading") {
   statusElement.textContent = message;
   statusElement.dataset.tone = tone;
   logger.add(tone === "error" ? "error" : "info", message);
+}
+
+function setupTheme() {
+  const savedTheme = localStorage.getItem(themeStorageKey);
+  const initialTheme = savedTheme === "light" ? "light" : "dark";
+  applyTheme(initialTheme);
+  themeSelect.value = initialTheme;
+  themeSelect.addEventListener("change", () => {
+    const nextTheme = themeSelect.value === "light" ? "light" : "dark";
+    applyTheme(nextTheme);
+    localStorage.setItem(themeStorageKey, nextTheme);
+  });
+}
+
+function applyTheme(theme: "dark" | "light") {
+  document.documentElement.dataset.theme = theme;
+  window.dispatchEvent(new CustomEvent("lab-theme-change", { detail: { theme } }));
 }
 
 async function initWebGPU(target: HTMLCanvasElement): Promise<WebGPUState> {
@@ -264,7 +283,7 @@ async function start() {
     setupPanelResize(() => runtime.resize());
 
     await refreshLabSelect();
-    const defaultLab = registry.get("basic-mesh");
+    const defaultLab = registry.get("triangle");
     labSelect.value = defaultLab.id;
     labSelect.disabled = false;
     await switchLab(defaultLab.id);
@@ -276,4 +295,5 @@ async function start() {
 }
 
 setupHelpDialog();
+setupTheme();
 void start();
