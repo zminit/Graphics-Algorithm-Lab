@@ -9,6 +9,7 @@ import {
   type EditableExperimentDocument,
   type EditableGraphLabDocument,
 } from "./EditableGraphDocument";
+import { showCreateDocumentDialog } from "./CreateDocumentDialog";
 import { UserLabStore } from "./UserLabStore";
 
 export type LabComposerOptions = {
@@ -46,6 +47,7 @@ export class LabComposer {
   private readonly status: HTMLElement;
   private scene?: ScenePreset;
   private blueprints: EditableGraphLabDocument[] = [];
+  private experiments: EditableExperimentDocument[] = [];
   private experiment: EditableExperimentDocument = createDefaultExperimentDocument(
     "my-experiment",
     "my-graph-lab",
@@ -131,6 +133,7 @@ export class LabComposer {
   private async refresh() {
     const result = await this.options.store.loadAll();
     this.blueprints = result.documents;
+    this.experiments = result.experiments;
     if (!this.blueprints.length) {
       const blueprint = createDefaultGraphDocument(createDefaultBlueprintId());
       await this.options.store.saveBlueprint(blueprint);
@@ -147,17 +150,40 @@ export class LabComposer {
   }
 
   private async createNew() {
-    const suffix = Math.round(Date.now() / 1000);
-    await this.setScene(this.sceneSelect.value || BuiltinAssets.scenes.shadowTest);
+    const result = await showCreateDocumentDialog({
+      title: "New Lab",
+      nameLabel: "Lab Name",
+      defaultName: "My Experiment",
+      existingIds: this.experiments.map((experiment) => experiment.id),
+      idLabel: "Lab Id",
+      extraFields: [
+        {
+          id: "scene",
+          label: "Scene",
+          value: this.sceneSelect.value || BuiltinAssets.scenes.shadowTest,
+          options: scenes.map((scene) => ({ label: scene.name, value: scene.path })),
+        },
+        {
+          id: "blueprint",
+          label: "Blueprint",
+          value: this.blueprintSelect.value || this.blueprints[0]?.id || createDefaultBlueprintId(),
+          options: this.blueprints.map((blueprint) => ({ label: blueprint.name, value: blueprint.id })),
+        },
+      ],
+    });
+    if (!result) return;
+    await this.setScene(result.extra.scene || BuiltinAssets.scenes.shadowTest);
     this.experiment = createDefaultExperimentDocument(
-      `my-experiment-${suffix}`,
-      this.blueprintSelect.value || this.blueprints[0]?.id || createDefaultBlueprintId(),
-      this.sceneSelect.value || BuiltinAssets.scenes.shadowTest,
+      result.id,
+      result.extra.blueprint || this.blueprints[0]?.id || createDefaultBlueprintId(),
+      result.extra.scene || BuiltinAssets.scenes.shadowTest,
       this.scene?.meshes.map((mesh) => mesh.id) ?? [],
     );
-    this.experiment.name = `My Experiment ${suffix}`;
+    this.experiment.name = result.name;
     this.render();
-    this.setStatus("Created a new experiment draft.");
+    if (await this.save()) {
+      this.setStatus(`Created lab ${this.experiment.name}.`);
+    }
   }
 
   private async loadSelectedExperiment() {

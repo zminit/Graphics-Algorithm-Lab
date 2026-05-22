@@ -3,6 +3,7 @@ import {
   validateEditableGraphDocument,
   type EditableGraphLabDocument,
 } from "./EditableGraphDocument";
+import { showCreateDocumentDialog, uniqueSafeId } from "./CreateDocumentDialog";
 import { UserLabStore } from "./UserLabStore";
 import { WgslEditor } from "./WgslEditor";
 
@@ -31,6 +32,7 @@ export class BlueprintWorkspace {
   private readonly shaderSelect: HTMLSelectElement;
   private readonly editor: WgslEditor;
   private selectedNodeId = "pass:Scene Mesh Pass";
+  private activeShaderId = "main";
   private dragging?: { id: string; offsetX: number; offsetY: number };
   private connecting?: { fromId: string };
 
@@ -64,6 +66,12 @@ export class BlueprintWorkspace {
         <section class="blueprint-code">
           <div class="blueprint-codebar">
             <label>Shader <select class="blueprint-shader-select"></select></label>
+            <div class="blueprint-shader-actions">
+              <button type="button" data-action="new-shader">New Shader</button>
+              <button type="button" data-action="duplicate-shader">Duplicate</button>
+              <button type="button" data-action="rename-shader">Rename</button>
+              <button type="button" data-action="delete-shader">Delete</button>
+            </div>
             <span class="blueprint-status">Ready.</span>
           </div>
           <div class="blueprint-editor"></div>
@@ -103,10 +111,14 @@ export class BlueprintWorkspace {
       if (!(target instanceof HTMLElement)) return;
       const action = target.dataset.action;
       const nodeKind = target.dataset.node as NodeKind | undefined;
-      if (action === "new") this.createNew();
+      if (action === "new") void this.createNew();
       if (action === "save") void this.save();
       if (action === "validate") this.validate();
       if (action === "close") this.close();
+      if (action === "new-shader") void this.createShader();
+      if (action === "duplicate-shader") void this.duplicateShader();
+      if (action === "rename-shader") void this.renameShader();
+      if (action === "delete-shader") this.deleteShader();
       if (nodeKind) this.addNode(nodeKind);
     });
 
@@ -115,6 +127,8 @@ export class BlueprintWorkspace {
     });
 
     this.shaderSelect.addEventListener("change", () => {
+      this.syncShaderFromEditor();
+      this.activeShaderId = this.shaderSelect.value;
       this.syncEditorFromShader();
     });
 
@@ -147,17 +161,29 @@ export class BlueprintWorkspace {
     const loaded = await this.options.store.load(this.labSelect.value);
     this.document = await this.options.store.hydrateShaders(loaded);
     this.selectedNodeId = `pass:${this.document.passes[0]?.name ?? ""}`;
+    this.activeShaderId = this.currentShaderId() ?? Object.keys(this.document.shaders)[0] ?? "";
     this.render();
     this.setStatus(`Loaded ${this.document.name}.`);
   }
 
-  private createNew() {
-    const suffix = Math.round(Date.now() / 1000);
-    this.document = createDefaultGraphDocument(`my-graph-lab-${suffix}`);
-    this.document.name = `My Blueprint ${suffix}`;
+  private async createNew() {
+    const existing = (await this.options.store.loadAll().catch(() => ({ documents: [] }))).documents.map((doc) => doc.id);
+    const result = await showCreateDocumentDialog({
+      title: "New Blueprint",
+      nameLabel: "Blueprint Name",
+      defaultName: "My Blueprint",
+      existingIds: existing,
+      idLabel: "Blueprint Id",
+    });
+    if (!result) return;
+    this.document = createDefaultGraphDocument(result.id);
+    this.document.name = result.name;
     this.selectedNodeId = "pass:Scene Mesh Pass";
+    this.activeShaderId = "main";
     this.render();
-    this.setStatus("Created a new Blueprint draft.");
+    if (await this.save()) {
+      this.setStatus(`Created blueprint ${this.document.name}.`);
+    }
   }
 
   private async save(): Promise<boolean> {
@@ -208,7 +234,7 @@ export class BlueprintWorkspace {
       this.selectedNodeId = `resource:${id}`;
     }
     if (kind === "meshPass" || kind === "fullscreenPass") {
-      const shaderId = `${id}Shader`;
+      const shaderId = uniqueSafeId(`${id}Shader`, Object.keys(this.document.shaders));
       this.document.shaders[shaderId] = {
         path: `${shaderId}.wgsl`,
         code: kind === "meshPass" ? this.document.shaders.main?.code ?? "" : fullscreenShader(),
@@ -241,9 +267,110 @@ export class BlueprintWorkspace {
             },
       );
       this.selectedNodeId = `pass:${id}`;
+      this.activeShaderId = shaderId;
     }
     this.document.layout.nodes[this.selectedNodeId] = { x, y };
     this.render();
+  }
+
+  private async createShader() {
+    this.syncShaderFromEditor();
+    const result = await showCreateDocumentDialog({
+      title: "New Shader",
+      nameLabel: "Shader Name",
+      defaultName: "New Shader",
+      existingIds: Object.keys(this.document.shaders),
+      idLabel: "Shader Id",
+      extraFields: [
+        {
+          id: "template",
+          label: "Template",
+          value: "mesh",
+          options: [
+            { label: "Mesh Shader", value: "mesh" },
+            { label: "Fullscreen Shader", value: "fullscreen" },
+            { label: "Empty Shader", value: "empty" },
+          ],
+        },
+      ],
+    });
+    if (!result) return;
+    this.document.shaders[result.id] = {
+      path: `${result.id}.wgsl`,
+      code: shaderTemplate(result.extra.template),
+    };
+    this.activeShaderId = result.id;
+    this.renderShaderSelect();
+    this.syncEditorFromShader();
+    this.setStatus(`Created shader ${result.id}.`);
+  }
+
+  private async duplicateShader() {
+    this.syncShaderFromEditor();
+    const sourceId = this.selectedShaderId();
+    const source = this.document.shaders[sourceId];
+    if (!source) return;
+    const result = await showCreateDocumentDialog({
+      title: "Duplicate Shader",
+      nameLabel: "Shader Name",
+      defaultName: `${sourceId} Copy`,
+      existingIds: Object.keys(this.document.shaders),
+      idLabel: "Shader Id",
+    });
+    if (!result) return;
+    this.document.shaders[result.id] = {
+      path: `${result.id}.wgsl`,
+      code: source.code,
+    };
+    this.activeShaderId = result.id;
+    this.renderShaderSelect();
+    this.syncEditorFromShader();
+    this.setStatus(`Duplicated shader ${sourceId}.`);
+  }
+
+  private async renameShader() {
+    this.syncShaderFromEditor();
+    const oldId = this.selectedShaderId();
+    const shader = this.document.shaders[oldId];
+    if (!shader) return;
+    const result = await showCreateDocumentDialog({
+      title: "Rename Shader",
+      nameLabel: "Shader Name",
+      defaultName: oldId,
+      existingIds: Object.keys(this.document.shaders).filter((id) => id !== oldId),
+      idLabel: "Shader Id",
+    });
+    if (!result) return;
+    this.document.shaders[result.id] = {
+      ...shader,
+      path: `${result.id}.wgsl`,
+    };
+    delete this.document.shaders[oldId];
+    for (const pass of this.document.passes) {
+      if (pass.shader === oldId) pass.shader = result.id;
+    }
+    this.activeShaderId = result.id;
+    this.render();
+    this.setStatus(`Renamed shader ${oldId} to ${result.id}.`);
+  }
+
+  private deleteShader() {
+    this.syncShaderFromEditor();
+    const shaderId = this.selectedShaderId();
+    if (Object.keys(this.document.shaders).length <= 1) {
+      this.setStatus("At least one shader is required.", "error");
+      return;
+    }
+    const users = this.document.passes.filter((pass) => pass.shader === shaderId).map((pass) => pass.name);
+    if (users.length) {
+      this.setStatus(`Shader ${shaderId} is used by: ${users.join(", ")}`, "error");
+      return;
+    }
+    delete this.document.shaders[shaderId];
+    this.activeShaderId = Object.keys(this.document.shaders)[0] ?? "";
+    this.renderShaderSelect();
+    this.syncEditorFromShader();
+    this.setStatus(`Deleted shader ${shaderId}.`);
   }
 
   private render() {
@@ -293,6 +420,7 @@ export class BlueprintWorkspace {
         }
         this.syncShaderFromEditor();
         this.selectedNodeId = node.id;
+        this.activeShaderId = this.currentShaderId() ?? this.activeShaderId;
         this.dragging = { id: node.id, offsetX: event.offsetX, offsetY: event.offsetY };
         button.setPointerCapture(event.pointerId);
         this.renderInspector();
@@ -320,6 +448,15 @@ export class BlueprintWorkspace {
     const form = document.createElement("div");
     form.className = "blueprint-inspector-form";
     form.innerHTML = `<p class="panel-label">Inspector</p><h3>${node.title}</h3>`;
+    form.append(
+      createTextRow("Blueprint Name", this.document.name, (value) => {
+        this.document.name = value || this.document.name;
+        this.refreshSelectedBlueprintLabel();
+      }),
+      createTextareaRow("Description", this.document.description ?? "", (value) => {
+        this.document.description = value;
+      }),
+    );
 
     if (node.id.startsWith("resource:")) {
       this.renderResourceInspector(form, node.title);
@@ -367,6 +504,7 @@ export class BlueprintWorkspace {
     form.append(createSelectRow("Shader", Object.keys(this.document.shaders), pass.shader, (value) => {
       this.syncShaderFromEditor();
       pass.shader = value;
+      this.activeShaderId = value;
       this.renderShaderSelect();
       this.syncEditorFromShader();
     }));
@@ -395,19 +533,30 @@ export class BlueprintWorkspace {
       option.textContent = id;
       this.shaderSelect.append(option);
     }
-    if (current) this.shaderSelect.value = current;
+    if (this.activeShaderId && this.document.shaders[this.activeShaderId]) {
+      this.shaderSelect.value = this.activeShaderId;
+      return;
+    }
+    if (current) {
+      this.shaderSelect.value = current;
+      this.activeShaderId = current;
+    }
   }
 
   private syncEditorFromShader() {
-    const shader = this.document.shaders[this.shaderSelect.value || this.currentShaderId() || "main"];
+    const shader = this.document.shaders[this.selectedShaderId()];
     this.editor.setValue(shader?.code ?? "");
   }
 
   private syncShaderFromEditor() {
-    const shaderId = this.shaderSelect.value || this.currentShaderId();
+    const shaderId = this.activeShaderId || this.shaderSelect.value || this.currentShaderId();
     if (shaderId && this.document.shaders[shaderId]) {
       this.document.shaders[shaderId].code = this.editor.getValue();
     }
+  }
+
+  private selectedShaderId() {
+    return this.shaderSelect.value || this.activeShaderId || this.currentShaderId() || Object.keys(this.document.shaders)[0] || "main";
   }
 
   private currentShaderId() {
@@ -560,6 +709,11 @@ export class BlueprintWorkspace {
     this.options.onLog(tone === "error" ? "error" : "info", message);
   }
 
+  private refreshSelectedBlueprintLabel() {
+    const option = [...this.labSelect.options].find((entry) => entry.value === this.document.id);
+    if (option) option.textContent = this.document.name;
+  }
+
   private query<T extends HTMLElement>(selector: string): T {
     const element = this.overlay.querySelector<T>(selector);
     if (!element) {
@@ -575,6 +729,17 @@ function createTextRow(label: string, value: string, onChange: (value: string) =
   const input = document.createElement("input");
   input.type = "text";
   input.value = value;
+  input.addEventListener("change", () => onChange(input.value.trim()));
+  row.append(input);
+  return row;
+}
+
+function createTextareaRow(label: string, value: string, onChange: (value: string) => void) {
+  const row = document.createElement("label");
+  row.innerHTML = `<span>${label}</span>`;
+  const input = document.createElement("textarea");
+  input.value = value;
+  input.rows = 3;
   input.addEventListener("change", () => onChange(input.value.trim()));
   row.append(input);
   return row;
@@ -662,6 +827,51 @@ fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec
 @fragment
 fn fragmentMain() -> @location(0) vec4f {
   return vec4f(params.values[0].xxx, 1.0);
+}
+`;
+}
+
+function shaderTemplate(template: string) {
+  if (template === "fullscreen") return fullscreenShader();
+  if (template === "empty") return "";
+  return `struct FrameUniforms {
+  viewProjection: mat4x4f,
+  reserved: mat4x4f,
+  resolutionTime: vec4f,
+};
+
+struct ObjectUniforms {
+  model: mat4x4f,
+  modelViewProjection: mat4x4f,
+};
+
+struct VertexInput {
+  @location(0) position: vec3f,
+  @location(1) normal: vec3f,
+  @location(2) uv: vec2f,
+};
+
+struct VertexOutput {
+  @builtin(position) position: vec4f,
+  @location(0) normal: vec3f,
+  @location(1) uv: vec2f,
+};
+
+@group(0) @binding(0) var<uniform> frame: FrameUniforms;
+@group(1) @binding(0) var<uniform> object: ObjectUniforms;
+
+@vertex
+fn vertexMain(input: VertexInput) -> VertexOutput {
+  var output: VertexOutput;
+  output.position = object.modelViewProjection * vec4f(input.position, 1.0);
+  output.normal = input.normal;
+  output.uv = input.uv;
+  return output;
+}
+
+@fragment
+fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
+  return vec4f(abs(input.normal), 1.0);
 }
 `;
 }

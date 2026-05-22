@@ -785,6 +785,8 @@ h1 {
 .blueprint-inspector-form button,
 .blueprint-inspector-form input,
 .blueprint-inspector-form select,
+.blueprint-inspector-form textarea,
+.blueprint-codebar button,
 .blueprint-codebar select,
 .composer-toolbar button,
 .composer-toolbar select,
@@ -803,6 +805,7 @@ h1 {
 .blueprint-toolbar button,
 .blueprint-library button,
 .blueprint-inspector-form button,
+.blueprint-codebar button,
 .composer-toolbar button,
 .composer-panel button {
   padding: 0 10px;
@@ -812,6 +815,7 @@ h1 {
 .blueprint-toolbar button:hover,
 .blueprint-library button:hover,
 .blueprint-inspector-form button:hover,
+.blueprint-codebar button:hover,
 .composer-toolbar button:hover,
 .composer-panel button:hover {
   border-color: #4d6a82;
@@ -975,6 +979,12 @@ h1 {
   width: 18px;
 }
 
+.blueprint-inspector-form textarea {
+  min-height: 58px;
+  padding: 7px 8px;
+  resize: vertical;
+}
+
 .blueprint-inspector-form button {
   width: 100%;
 }
@@ -1005,6 +1015,13 @@ h1 {
   gap: 8px;
 }
 
+.blueprint-shader-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .blueprint-editor {
   min-height: 0;
 }
@@ -1018,6 +1035,90 @@ h1 {
 
 .blueprint-status[data-tone="error"] {
   color: #ffb8b8;
+}
+
+.create-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgb(6 9 13 / 74%);
+}
+
+.create-dialog {
+  display: grid;
+  gap: 12px;
+  width: min(440px, 100%);
+  padding: 14px;
+  border: 1px solid #364555;
+  border-radius: 8px;
+  background: #10161d;
+  box-shadow: 0 20px 70px rgb(0 0 0 / 42%);
+}
+
+.create-dialog header,
+.create-dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.create-dialog strong {
+  color: #f6f8fb;
+  font-size: 14px;
+}
+
+.create-dialog label {
+  display: grid;
+  gap: 5px;
+  color: #9fb0be;
+  font-size: 12px;
+}
+
+.create-dialog input,
+.create-dialog select,
+.create-dialog button {
+  height: 32px;
+  min-width: 0;
+  color: #dfe8ef;
+  font-size: 12px;
+  border: 1px solid #364555;
+  border-radius: 6px;
+  background: #19222c;
+}
+
+.create-dialog input,
+.create-dialog select {
+  padding: 0 8px;
+}
+
+.create-dialog button {
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.create-dialog button:hover {
+  border-color: #4d6a82;
+  background: #202c38;
+}
+
+.create-dialog details {
+  color: #9fb0be;
+  font-size: 12px;
+}
+
+.create-dialog summary {
+  cursor: pointer;
+}
+
+.create-dialog-status {
+  min-height: 16px;
+  margin: 0;
+  color: #ffb8b8;
+  font-size: 12px;
 }
 
 .composer-body {
@@ -1177,6 +1278,8 @@ h1 {
 :root[data-theme="light"] .blueprint-inspector-form button,
 :root[data-theme="light"] .blueprint-inspector-form input,
 :root[data-theme="light"] .blueprint-inspector-form select,
+:root[data-theme="light"] .blueprint-inspector-form textarea,
+:root[data-theme="light"] .blueprint-codebar button,
 :root[data-theme="light"] .blueprint-codebar select,
 :root[data-theme="light"] .composer-toolbar button,
 :root[data-theme="light"] .composer-toolbar select,
@@ -1195,6 +1298,7 @@ h1 {
 :root[data-theme="light"] .blueprint-toolbar button:hover,
 :root[data-theme="light"] .blueprint-library button:hover,
 :root[data-theme="light"] .blueprint-inspector-form button:hover,
+:root[data-theme="light"] .blueprint-codebar button:hover,
 :root[data-theme="light"] .composer-toolbar button:hover,
 :root[data-theme="light"] .composer-panel button:hover {
   border-color: var(--accent);
@@ -1282,6 +1386,39 @@ h1 {
 :root[data-theme="light"] .help-overlay,
 :root[data-theme="light"] .blueprint-overlay,
 :root[data-theme="light"] .composer-overlay {
+  background: rgb(222 231 240 / 82%);
+}
+
+:root[data-theme="light"] .create-dialog {
+  color: var(--text-primary);
+  border-color: var(--border);
+  background: var(--panel-bg);
+  box-shadow: 0 22px 70px rgb(45 55 72 / 20%);
+}
+
+:root[data-theme="light"] .create-dialog strong {
+  color: var(--text-heading);
+}
+
+:root[data-theme="light"] .create-dialog label,
+:root[data-theme="light"] .create-dialog details {
+  color: var(--text-muted);
+}
+
+:root[data-theme="light"] .create-dialog input,
+:root[data-theme="light"] .create-dialog select,
+:root[data-theme="light"] .create-dialog button {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+  background: var(--control-bg);
+}
+
+:root[data-theme="light"] .create-dialog button:hover {
+  border-color: var(--accent);
+  background: var(--control-hover-bg);
+}
+
+:root[data-theme="light"] .create-dialog-overlay {
   background: rgb(222 231 240 / 82%);
 }
 
