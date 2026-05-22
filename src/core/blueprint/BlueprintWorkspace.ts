@@ -49,6 +49,7 @@ export class BlueprintWorkspace {
           <button type="button" data-action="new">New</button>
           <button type="button" data-action="save">Save</button>
           <button type="button" data-action="validate">Validate</button>
+          <button type="button" data-action="delete-blueprint">Delete Blueprint</button>
           <button type="button" data-action="close">Close</button>
         </header>
         <div class="blueprint-body">
@@ -115,6 +116,7 @@ export class BlueprintWorkspace {
       if (action === "save") void this.save();
       if (action === "validate") this.validate();
       if (action === "close") this.close();
+      if (action === "delete-blueprint") void this.deleteBlueprint();
       if (action === "new-shader") void this.createShader();
       if (action === "duplicate-shader") void this.duplicateShader();
       if (action === "rename-shader") void this.renameShader();
@@ -198,6 +200,34 @@ export class BlueprintWorkspace {
     await this.refreshLabList();
     this.setStatus(`Saved blueprint ${this.document.id}.`);
     return true;
+  }
+
+  private async deleteBlueprint() {
+    const all = await this.options.store.loadAll();
+    const deletedId = this.document.id;
+    const deletedName = this.document.name;
+    const references = all.experiments.filter((experiment) => experiment.blueprintId === this.document.id);
+    const suffix = references.length
+      ? `\n\n${references.length} lab(s) will keep a Missing Blueprint placeholder.`
+      : "";
+    const confirmed = window.confirm(`Delete blueprint "${deletedName}"?\n\nIt will be moved to user-labs/.trash.${suffix}`);
+    if (!confirmed) return;
+    try {
+      await this.options.store.deleteBlueprint(this.document.id);
+      await this.options.onBlueprintsChanged();
+      await this.refreshLabList();
+      if (this.labSelect.value) {
+        await this.loadSelectedLab();
+      } else {
+        this.document = createDefaultGraphDocument();
+        this.selectedNodeId = "pass:Scene Mesh Pass";
+        this.activeShaderId = "main";
+        this.render();
+      }
+      this.setStatus(`Deleted blueprint ${deletedId}.`);
+    } catch (error) {
+      this.setStatus(error instanceof Error ? error.message : String(error), "error");
+    }
   }
 
   private validate() {
@@ -501,7 +531,7 @@ export class BlueprintWorkspace {
     const pass = this.document.passes.find((entry) => entry.name === name);
     if (!pass) return;
     form.append(createTextRow("Name", pass.name, (value) => this.renamePass(pass.name, value)));
-    form.append(createSelectRow("Shader", Object.keys(this.document.shaders), pass.shader, (value) => {
+    form.append(createSelectRow("Shader", shaderOptions(this.document, pass.shader), pass.shader, (value) => {
       this.syncShaderFromEditor();
       pass.shader = value;
       this.activeShaderId = value;
@@ -531,6 +561,12 @@ export class BlueprintWorkspace {
       const option = document.createElement("option");
       option.value = id;
       option.textContent = id;
+      this.shaderSelect.append(option);
+    }
+    if (current && !this.document.shaders[current]) {
+      const option = document.createElement("option");
+      option.value = current;
+      option.textContent = `Missing: ${current}`;
       this.shaderSelect.append(option);
     }
     if (this.activeShaderId && this.document.shaders[this.activeShaderId]) {
@@ -745,14 +781,20 @@ function createTextareaRow(label: string, value: string, onChange: (value: strin
   return row;
 }
 
-function createSelectRow(label: string, options: string[], value: string, onChange: (value: string) => void) {
+function createSelectRow(
+  label: string,
+  options: Array<string | { label: string; value: string }>,
+  value: string,
+  onChange: (value: string) => void,
+) {
   const row = document.createElement("label");
   row.innerHTML = `<span>${label}</span>`;
   const select = document.createElement("select");
   for (const option of options) {
     const element = document.createElement("option");
-    element.value = option;
-    element.textContent = option || "None";
+    const optionValue = typeof option === "string" ? option : option.value;
+    element.value = optionValue;
+    element.textContent = typeof option === "string" ? option || "None" : option.label;
     select.append(element);
   }
   select.value = value;
@@ -792,6 +834,13 @@ function depthResources(document: EditableGraphLabDocument) {
   return Object.entries(document.resources)
     .filter(([, resource]) => resource.kind === "depthTexture")
     .map(([id]) => id);
+}
+
+function shaderOptions(document: EditableGraphLabDocument, current: string) {
+  const options = Object.keys(document.shaders);
+  return current && !document.shaders[current]
+    ? [...options, { label: `Missing: ${current}`, value: current }]
+    : options;
 }
 
 function firstTexture(document: EditableGraphLabDocument) {

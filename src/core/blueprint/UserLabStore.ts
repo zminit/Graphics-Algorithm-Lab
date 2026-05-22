@@ -43,6 +43,8 @@ export class UserLabStore {
         labs.push(
           defineGraphLab(documentToGraphLabSpec(blueprint, entry.updatedAt || this.saveVersion, experiment)),
         );
+      } else if (!blueprint) {
+        labs.push(createMissingBlueprintLab(experiment));
       }
     }
 
@@ -140,6 +142,22 @@ export class UserLabStore {
     }
   }
 
+  async deleteBlueprint(id: string) {
+    const response = await fetch(`/__user_labs/blueprints/${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!response.ok) {
+      throw new Error(await readError(response));
+    }
+    this.saveVersion = Date.now();
+  }
+
+  async deleteExperiment(id: string) {
+    const response = await fetch(`/__user_labs/experiments/${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!response.ok) {
+      throw new Error(await readError(response));
+    }
+    this.saveVersion = Date.now();
+  }
+
   async hydrateShaders(document: EditableGraphLabDocument): Promise<EditableGraphLabDocument> {
     const next = structuredClone(document);
     for (const shader of Object.values(next.shaders)) {
@@ -164,6 +182,21 @@ export class UserLabStore {
     }
     return (await response.json()) as UserLabCollection;
   }
+}
+
+function createMissingBlueprintLab(experiment: EditableExperimentDocument): Lab {
+  return {
+    id: experiment.id,
+    name: `${experiment.name} (Missing Blueprint)`,
+    category: "debug",
+    description: `Lab references missing blueprint: ${experiment.blueprintId}`,
+    setup() {
+      throw new Error(`Lab references missing blueprint: ${experiment.blueprintId}`);
+    },
+    render() {
+      // Placeholder labs never render because setup always fails.
+    },
+  };
 }
 
 function stripShaderCode(document: EditableGraphLabDocument): EditableGraphLabDocument {

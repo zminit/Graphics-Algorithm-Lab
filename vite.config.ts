@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { defineConfig, type Plugin } from "vite";
 
@@ -73,6 +73,11 @@ async function handleBlueprintRequest(
     sendJson(response, 200, JSON.parse(await readFile(blueprintDocumentPath(root, id), "utf8")));
     return;
   }
+  if (method === "DELETE" && parts.length === 3) {
+    await softDeleteDirectory(root, "blueprints", id);
+    sendJson(response, 200, { ok: true });
+    return;
+  }
   if (method === "PUT" && parts.length === 3) {
     const body = await readBody(request);
     await mkdir(path.dirname(blueprintDocumentPath(root, id)), { recursive: true });
@@ -113,6 +118,11 @@ async function handleExperimentRequest(
     sendJson(response, 200, JSON.parse(await readFile(experimentDocumentPath(root, id), "utf8")));
     return;
   }
+  if (method === "DELETE" && parts.length === 3) {
+    await softDeleteDirectory(root, "experiments", id);
+    sendJson(response, 200, { ok: true });
+    return;
+  }
   if (method === "PUT" && parts.length === 3) {
     const body = await readBody(request);
     await mkdir(path.dirname(experimentDocumentPath(root, id)), { recursive: true });
@@ -141,6 +151,13 @@ function blueprintShaderPath(root: string, blueprintId: string, shaderFile: stri
 
 function experimentDocumentPath(root: string, experimentId: string) {
   return path.join(root, "experiments", experimentId, "lab.json");
+}
+
+async function softDeleteDirectory(root: string, kind: "blueprints" | "experiments", id: string) {
+  const source = path.join(root, kind, id);
+  const target = path.join(root, ".trash", kind, `${id}-${Date.now()}`);
+  await mkdir(path.dirname(target), { recursive: true });
+  await rename(source, target);
 }
 
 async function listAll(root: string) {

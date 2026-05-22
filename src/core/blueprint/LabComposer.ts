@@ -67,6 +67,7 @@ export class LabComposer {
           <button type="button" data-action="new">New</button>
           <button type="button" data-action="save">Save</button>
           <button type="button" data-action="run">Run</button>
+          <button type="button" data-action="delete-lab">Delete Lab</button>
           <button type="button" data-action="close">Close</button>
         </header>
         <div class="composer-body">
@@ -117,6 +118,7 @@ export class LabComposer {
       if (action === "new") void this.createNew();
       if (action === "save") void this.save();
       if (action === "run") void this.run();
+      if (action === "delete-lab") void this.deleteLab();
       if (action === "add-material") this.addMaterial();
       if (action === "delete-material") this.deleteMaterial(target.dataset.materialId ?? "");
     });
@@ -142,7 +144,7 @@ export class LabComposer {
     }
     this.populateBlueprintSelect();
     this.populateExperimentSelect(result.experiments);
-    if (!this.experiment.blueprintId || !this.blueprints.some((doc) => doc.id === this.experiment.blueprintId)) {
+    if (!this.experiment.blueprintId) {
       this.experiment.blueprintId = this.blueprints[0]?.id ?? createDefaultBlueprintId();
     }
     await this.setScene(this.experiment.scene || BuiltinAssets.scenes.shadowTest);
@@ -227,6 +229,29 @@ export class LabComposer {
     }
   }
 
+  private async deleteLab() {
+    const confirmed = window.confirm(`Delete lab "${this.experiment.name}"?\n\nIt will be moved to user-labs/.trash.`);
+    if (!confirmed) return;
+    const deletedId = this.experiment.id;
+    try {
+      await this.options.store.deleteExperiment(this.experiment.id);
+      await this.options.onLabsChanged();
+      await this.refresh();
+      if (this.experiments[0]) {
+        this.experiment = this.experiments[0];
+        await this.setScene(this.experiment.scene);
+        await this.options.onRunLab(this.experiment.id);
+      } else {
+        await this.createDraftFromCurrentSelection();
+        await this.options.onRunLab("triangle");
+      }
+      this.render();
+      this.setStatus(`Deleted lab ${deletedId}.`);
+    } catch (error) {
+      this.setStatus(error instanceof Error ? error.message : String(error), "error");
+    }
+  }
+
   private async run() {
     if (await this.save()) {
       await this.options.onRunLab(this.experiment.id);
@@ -265,6 +290,7 @@ export class LabComposer {
   }
 
   private render() {
+    this.populateBlueprintSelect();
     this.nameInput.value = this.experiment.name;
     this.sceneSelect.value = this.experiment.scene;
     this.blueprintSelect.value = this.experiment.blueprintId;
@@ -343,6 +369,13 @@ export class LabComposer {
 
   private populateBlueprintSelect() {
     this.blueprintSelect.replaceChildren();
+    const hasCurrent = this.blueprints.some((blueprint) => blueprint.id === this.experiment.blueprintId);
+    if (this.experiment.blueprintId && !hasCurrent) {
+      const option = document.createElement("option");
+      option.value = this.experiment.blueprintId;
+      option.textContent = `Missing: ${this.experiment.blueprintId}`;
+      this.blueprintSelect.append(option);
+    }
     for (const blueprint of this.blueprints) {
       const option = document.createElement("option");
       option.value = blueprint.id;
@@ -362,6 +395,16 @@ export class LabComposer {
     if (experiments.some((experiment) => experiment.id === this.experiment.id)) {
       this.experimentSelect.value = this.experiment.id;
     }
+  }
+
+  private async createDraftFromCurrentSelection() {
+    await this.setScene(this.sceneSelect.value || BuiltinAssets.scenes.shadowTest);
+    this.experiment = createDefaultExperimentDocument(
+      "my-experiment",
+      this.blueprints[0]?.id || createDefaultBlueprintId(),
+      this.sceneSelect.value || BuiltinAssets.scenes.shadowTest,
+      this.scene?.meshes.map((mesh) => mesh.id) ?? [],
+    );
   }
 
   private ensureAssignments() {

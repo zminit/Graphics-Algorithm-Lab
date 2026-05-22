@@ -241,6 +241,12 @@ async function start() {
 
     const refreshLabSelect = async (preferredLabId?: string) => {
       const userLabs = await userLabStore.loadAll();
+      const builtInIds = new Set(createLabRegistry().list().map((lab) => lab.id));
+      for (const lab of registry.list()) {
+        if (!builtInIds.has(lab.id)) {
+          registry.unregister(lab.id);
+        }
+      }
       for (const lab of userLabs.labs) {
         registry.replace(lab);
       }
