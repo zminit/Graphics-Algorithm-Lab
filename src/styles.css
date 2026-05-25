@@ -854,6 +854,47 @@ h1 {
   text-align: left;
 }
 
+.blueprint-pass-order {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid #26323e;
+}
+
+.blueprint-pass-order-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.blueprint-pass-order-row[data-selected="true"] button:first-child {
+  border-color: #77a7c9;
+  background: #19222c;
+}
+
+.blueprint-pass-order-row button {
+  width: auto;
+  margin-top: 0;
+  padding: 0 8px;
+  text-align: center;
+}
+
+.blueprint-pass-order-row button:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blueprint-pass-order-empty {
+  margin: 0;
+  color: #9fb0be;
+  font-size: 12px;
+}
+
 .blueprint-canvas {
   position: relative;
   min-width: 0;
@@ -1339,6 +1380,7 @@ h1 {
 :root[data-theme="light"] .help-section,
 :root[data-theme="light"] .log-toolbar,
 :root[data-theme="light"] .log-entry,
+:root[data-theme="light"] .blueprint-pass-order,
 :root[data-theme="light"] .composer-card,
 :root[data-theme="light"] .composer-object-row {
   border-color: var(--border);
@@ -1375,11 +1417,17 @@ h1 {
   background: var(--control-hover-bg);
 }
 
+:root[data-theme="light"] .blueprint-pass-order-row[data-selected="true"] button:first-child {
+  border-color: var(--accent);
+  background: var(--control-hover-bg);
+}
+
 :root[data-theme="light"] .graph-node small,
 :root[data-theme="light"] .blueprint-node small,
 :root[data-theme="light"] .debug-status,
 :root[data-theme="light"] .log-count,
-:root[data-theme="light"] .log-meta {
+:root[data-theme="light"] .log-meta,
+:root[data-theme="light"] .blueprint-pass-order-empty {
   color: var(--text-muted);
 }
 

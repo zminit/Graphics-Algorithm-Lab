@@ -27,6 +27,7 @@ export class BlueprintWorkspace {
   private readonly overlay: HTMLElement;
   private readonly canvas: HTMLElement;
   private readonly inspector: HTMLElement;
+  private readonly library: HTMLElement;
   private readonly status: HTMLElement;
   private readonly labSelect: HTMLSelectElement;
   private readonly shaderSelect: HTMLSelectElement;
@@ -83,6 +84,7 @@ export class BlueprintWorkspace {
     document.body.append(this.overlay);
     this.canvas = this.query(".blueprint-canvas");
     this.inspector = this.query(".blueprint-inspector");
+    this.library = this.query(".blueprint-library");
     this.status = this.query(".blueprint-status");
     this.labSelect = this.query(".blueprint-lab-select");
     this.shaderSelect = this.query(".blueprint-shader-select");
@@ -121,6 +123,9 @@ export class BlueprintWorkspace {
       if (action === "duplicate-shader") void this.duplicateShader();
       if (action === "rename-shader") void this.renameShader();
       if (action === "delete-shader") this.deleteShader();
+      if (action === "move-pass-up") this.movePass(target.dataset.passName ?? "", -1);
+      if (action === "move-pass-down") this.movePass(target.dataset.passName ?? "", 1);
+      if (action === "select-pass") this.selectPass(target.dataset.passName ?? "");
       if (nodeKind) this.addNode(nodeKind);
     });
 
@@ -404,10 +409,67 @@ export class BlueprintWorkspace {
   }
 
   private render() {
+    this.renderLibrary();
     this.renderCanvas();
     this.renderInspector();
     this.renderShaderSelect();
     this.syncEditorFromShader();
+  }
+
+  private renderLibrary() {
+    const fragment = document.createDocumentFragment();
+    const nodeLabel = document.createElement("p");
+    nodeLabel.className = "panel-label";
+    nodeLabel.textContent = "Nodes";
+    fragment.append(nodeLabel);
+    for (const [kind, label] of [
+      ["texture2d", "Texture2D"],
+      ["depthTexture", "Depth Texture"],
+      ["sampler", "Sampler"],
+      ["meshPass", "Mesh Pass"],
+      ["fullscreenPass", "Fullscreen Pass"],
+    ] as Array<[NodeKind, string]>) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.node = kind;
+      button.textContent = label;
+      fragment.append(button);
+    }
+    const order = document.createElement("section");
+    order.className = "blueprint-pass-order";
+    order.innerHTML = `<p class="panel-label">Pass Order</p>`;
+    if (!this.document.passes.length) {
+      const empty = document.createElement("p");
+      empty.className = "blueprint-pass-order-empty";
+      empty.textContent = "No passes.";
+      order.append(empty);
+    }
+    this.document.passes.forEach((pass, index) => {
+      const row = document.createElement("div");
+      row.className = "blueprint-pass-order-row";
+      if (`pass:${pass.name}` === this.selectedNodeId) row.dataset.selected = "true";
+      const select = document.createElement("button");
+      select.type = "button";
+      select.dataset.action = "select-pass";
+      select.dataset.passName = pass.name;
+      select.textContent = `${index + 1}. ${pass.name}`;
+      const up = document.createElement("button");
+      up.type = "button";
+      up.dataset.action = "move-pass-up";
+      up.dataset.passName = pass.name;
+      up.textContent = "Up";
+      up.disabled = index === 0;
+      const down = document.createElement("button");
+      down.type = "button";
+      down.dataset.action = "move-pass-down";
+      down.dataset.passName = pass.name;
+      down.textContent = "Down";
+      down.disabled = index === this.document.passes.length - 1;
+      row.append(select, up, down);
+      order.append(row);
+    });
+    fragment.append(order);
+    this.library.replaceChildren(fragment);
   }
 
   private renderCanvas() {
@@ -552,6 +614,10 @@ export class BlueprintWorkspace {
       pass.reads = value.split(",").map((entry) => entry.trim()).filter(Boolean);
       this.render();
     }));
+    form.append(createCheckboxRow("Clear Target", pass.clear !== false, (value) => {
+      pass.clear = value;
+      this.render();
+    }));
   }
 
   private renderShaderSelect() {
@@ -686,6 +752,29 @@ export class BlueprintWorkspace {
     pass.name = nextName;
     moveLayout(this.document, `pass:${oldName}`, `pass:${nextName}`);
     this.selectedNodeId = `pass:${nextName}`;
+    this.render();
+  }
+
+  private movePass(name: string, direction: -1 | 1) {
+    if (!name) return;
+    this.syncShaderFromEditor();
+    const index = this.document.passes.findIndex((pass) => pass.name === name);
+    const nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= this.document.passes.length) return;
+    const [pass] = this.document.passes.splice(index, 1);
+    this.document.passes.splice(nextIndex, 0, pass);
+    this.selectedNodeId = `pass:${pass.name}`;
+    this.activeShaderId = pass.shader;
+    this.render();
+    this.setStatus(`Moved ${pass.name} ${direction < 0 ? "up" : "down"}.`);
+  }
+
+  private selectPass(name: string) {
+    const pass = this.document.passes.find((entry) => entry.name === name);
+    if (!pass) return;
+    this.syncShaderFromEditor();
+    this.selectedNodeId = `pass:${pass.name}`;
+    this.activeShaderId = pass.shader;
     this.render();
   }
 
