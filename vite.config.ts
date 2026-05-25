@@ -70,7 +70,7 @@ async function handleBlueprintRequest(
     return;
   }
   if (method === "GET" && parts.length === 3) {
-    sendJson(response, 200, JSON.parse(await readFile(blueprintDocumentPath(root, id), "utf8")));
+    sendJson(response, 200, await readJsonFile(blueprintDocumentPath(root, id)));
     return;
   }
   if (method === "DELETE" && parts.length === 3) {
@@ -115,7 +115,7 @@ async function handleExperimentRequest(
     return;
   }
   if (method === "GET" && parts.length === 3) {
-    sendJson(response, 200, JSON.parse(await readFile(experimentDocumentPath(root, id), "utf8")));
+    sendJson(response, 200, await readJsonFile(experimentDocumentPath(root, id)));
     return;
   }
   if (method === "DELETE" && parts.length === 3) {
@@ -211,6 +211,15 @@ function readBody(request: import("node:http").IncomingMessage) {
     request.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
     request.on("error", reject);
   });
+}
+
+async function readJsonFile(file: string) {
+  const text = await readFile(file, "utf8");
+  return JSON.parse(stripBom(text));
+}
+
+function stripBom(text: string) {
+  return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
 }
 
 function sendJson(response: import("node:http").ServerResponse, status: number, payload: unknown) {
