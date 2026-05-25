@@ -9,7 +9,7 @@ import { WgslEditor } from "./WgslEditor";
 
 export type BlueprintWorkspaceOptions = {
   store: UserLabStore;
-  onBlueprintsChanged: () => Promise<void> | void;
+  onBlueprintsChanged: (preferredLabId?: string) => Promise<void> | void;
   onLog: (level: "info" | "warn" | "error", message: string) => void;
 };
 

@@ -264,7 +264,12 @@ async function start() {
 
     const blueprintWorkspace = new BlueprintWorkspace({
       store: userLabStore,
-      onBlueprintsChanged: refreshLabSelect,
+      onBlueprintsChanged: async (preferredLabId = labSelect.value) => {
+        await refreshLabSelect(preferredLabId);
+        if (preferredLabId && labSelect.value === preferredLabId) {
+          await switchLab(preferredLabId);
+        }
+      },
       onLog: (level, message) => logger.add(level, message),
     });
     const labComposer = new LabComposer({

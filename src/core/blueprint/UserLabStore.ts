@@ -26,6 +26,7 @@ export class UserLabStore {
     ]);
     const documents: EditableGraphLabDocument[] = [];
     const hydratedBlueprints = new Map<string, EditableGraphLabDocument>();
+    const blueprintUpdatedAt = new Map<string, number>();
     const loadedExperiments: EditableExperimentDocument[] = [];
     const labs: Lab[] = [];
 
@@ -33,6 +34,7 @@ export class UserLabStore {
       const document = await this.loadBlueprint(entry.id);
       documents.push(document);
       hydratedBlueprints.set(document.id, document);
+      blueprintUpdatedAt.set(document.id, entry.updatedAt);
     }
 
     for (const entry of experiments) {
@@ -41,7 +43,7 @@ export class UserLabStore {
       const blueprint = hydratedBlueprints.get(experiment.blueprintId);
       if (blueprint && !validateEditableGraphDocument(blueprint).length) {
         labs.push(
-          defineGraphLab(documentToGraphLabSpec(blueprint, entry.updatedAt || this.saveVersion, experiment)),
+          defineGraphLab(documentToGraphLabSpec(blueprint, blueprintUpdatedAt.get(blueprint.id) || this.saveVersion, experiment)),
         );
       } else if (!blueprint) {
         labs.push(createMissingBlueprintLab(experiment));
