@@ -157,7 +157,18 @@ async function softDeleteDirectory(root: string, kind: "blueprints" | "experimen
   const source = path.join(root, kind, id);
   const target = path.join(root, ".trash", kind, `${id}-${Date.now()}`);
   await mkdir(path.dirname(target), { recursive: true });
-  await rename(source, target);
+  try {
+    await rename(source, target);
+  } catch (error) {
+    if (!isRenameBlocked(error)) {
+      throw error;
+    }
+    await writeFile(
+      path.join(source, ".deleted.json"),
+      JSON.stringify({ id, kind, deletedAt: new Date().toISOString(), reason: "rename-blocked" }, null, 2),
+      "utf8",
+    );
+  }
 }
 
 async function listAll(root: string) {
@@ -177,6 +188,12 @@ async function listDocuments(root: string, documentName: string, publicRoot: str
       continue;
     }
     const file = path.join(root, entry.name, documentName);
+    try {
+      await stat(path.join(root, entry.name, ".deleted.json"));
+      continue;
+    } catch {
+      // No tombstone; keep listing this document.
+    }
     try {
       const info = await stat(file);
       docs.push({ id: entry.name, path: `${publicRoot}/${entry.name}/${documentName}`, updatedAt: info.mtimeMs });
@@ -210,4 +227,13 @@ function sendText(response: import("node:http").ServerResponse, status: number, 
 
 function isNotFound(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
+}
+
+function isRenameBlocked(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error.code === "EPERM" || error.code === "EACCES" || error.code === "EBUSY")
+  );
 }
