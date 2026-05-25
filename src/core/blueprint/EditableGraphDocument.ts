@@ -316,7 +316,6 @@ struct VertexOutput {
   @builtin(position) position: vec4f,
   @location(0) normal: vec3f,
   @location(1) uv: vec2f,
-  @location(2) color: vec4f,
 };
 
 @group(0) @binding(0) var<uniform> frame: FrameUniforms;
@@ -332,19 +331,19 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
   output.position = object.modelViewProjection * vec4f(input.position, 1.0);
   output.normal = normalize((object.model * vec4f(input.normal, 0.0)).xyz);
   output.uv = input.uv;
-  let texColor = textureSample(baseColorTexture, materialSampler, input.uv);
-  output.color = mix(material.baseColor, material.baseColor * texColor, material.textureFlags.x);
   return output;
 }
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
+  let texColor = textureSample(baseColorTexture, materialSampler, input.uv);
+  let baseColor = mix(material.baseColor, material.baseColor * texColor, material.textureFlags.x);
   let lightDirection = normalize(vec3f(-0.55, -1.0, -0.35));
   let n = normalize(input.normal);
   let ndotl = max(dot(n, -lightDirection), 0.0);
   let ambient = params.values[0].x;
   let lightIntensity = params.values[1].x;
-  return vec4f(input.color.rgb * (ambient + ndotl * lightIntensity), input.color.a);
+  return vec4f(baseColor.rgb * (ambient + ndotl * lightIntensity), baseColor.a);
 }
 `;
 }
